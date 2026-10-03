@@ -61,6 +61,10 @@ MUTATIONS = [
     ("README.md", "# MudRunnerMods", "# MudRunnerMods\nmail: someone@gm" + "ail.com", "test_privacy.py",
      "test_repository_files"),
     ("tools/mrxml.py", '        s += ".0"', "        pass", "test_xml.py", "test_fmt_num"),
+    ("tools/build_mods.py", 'z.open(zi, "w") as dst', 'z.open(zi, "w", force_zip64=True) as dst', "test_mods.py",
+     "test_stream_copy"),
+    ("tools/install_local.py", "skip = [] if include_opt_in else opt_in()", "skip = []", "test_install.py",
+     "test_default_is_the_safe_set_and_says_so"),
 ]
 
 

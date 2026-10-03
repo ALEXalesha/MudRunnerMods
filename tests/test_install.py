@@ -50,25 +50,51 @@ class ConfigEditTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             install_local.edit_config("<Config />\n", self.PKGS)
 
-    def test_apply_on_a_copy_writes_backup(self):
+    def run_tool(self, *args):
         tmp = tempfile.mkdtemp(prefix="mrinst_")
         cfg = os.path.join(tmp, "Config.xml")
         local = os.path.join(tmp, "local")
         os.makedirs(local)
         with open(cfg, "w", encoding="utf-8", newline="") as fh:
             fh.write(CONFIG)
-        open(os.path.join(local, "OpenTrail_No_Damage.zip"), "wb").close()
+        for name in install_local.build_mods.load_order():
+            spec = install_local.build_mods.load_spec(name)
+            open(os.path.join(local, install_local.build_mods.zip_name(spec)), "wb").close()
         r = subprocess.run([sys.executable, os.path.join(common.ROOT, "tools", "install_local.py"),
-                            "--config", cfg, "--local", local, "--apply"],
+                            "--config", cfg, "--local", local] + list(args),
                            capture_output=True, text=True, timeout=120)
-        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         text = open(cfg, encoding="utf-8").read()
-        self.assertIn("OpenTrail_No_Damage.zip", text)
         backups = [f for f in os.listdir(tmp) if f.startswith("Config.xml.opentrail-")]
-        self.assertEqual(len(backups), 1)
-        self.assertEqual(open(os.path.join(tmp, backups[0]), encoding="utf-8").read(), CONFIG)
+        backup = open(os.path.join(tmp, backups[0]), encoding="utf-8").read() if backups else None
         shutil.rmtree(tmp, ignore_errors=True)       # a temp folder made by this test only
+        return r, text, backup
 
+    def test_default_is_the_safe_set_and_says_so(self):
+        r, text, backup = self.run_tool("--apply")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(backup, CONFIG)
+        self.assertNotIn("Unlocked_Trucks", text)
+        self.assertEqual(text.count("OpenTrail_"), 8)
+        self.assertIn("Installing 8 mods", r.stdout)
+        self.assertIn("Not installed: unlocked_trucks", r.stdout)
+
+    def test_all_and_explicit(self):
+        r, text, _b = self.run_tool("--all", "--apply")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("OpenTrail_Unlocked_Trucks.zip", text)
+        r, text, _b = self.run_tool("--mods", "unlocked_trucks,no_damage", "--apply")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(text.count("OpenTrail_"), 2)
+        self.assertLess(text.index("No_Damage"), text.index("Unlocked_Trucks"))     # load order kept
+
+    def test_dry_run_writes_nothing(self):
+        r, text, backup = self.run_tool()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(text, CONFIG)
+        self.assertIsNone(backup)
+
+    def test_opt_in_lists_unlocked_trucks(self):
+        self.assertEqual(install_local.opt_in(), ["unlocked_trucks"])
 
 if __name__ == "__main__":
     unittest.main()

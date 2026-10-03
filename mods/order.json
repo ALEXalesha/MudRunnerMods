@@ -11,6 +11,11 @@
     "unlocked_trucks"
   ],
   "replaces": {
-    "hyper_power": ["powerful_engines"]
-  }
+    "hyper_power": [
+      "powerful_engines"
+    ]
+  },
+  "opt_in": [
+    "unlocked_trucks"
+  ]
 }
