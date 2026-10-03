@@ -1,0 +1,25 @@
+# Checks on GitHub. The hosted runner has no MudRunner, so the tests that need the
+# game files are skipped there; the parser, resolver, install and privacy tests run.
+# Keep in step with .gitea/workflows/ci.yml.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Dependencies
+        run: pip install -r tools/requirements.txt
+      - name: Tests
+        run: python -m unittest discover -s tests -v

@@ -1,0 +1,36 @@
+# Checks on the home Gitea. Copy of .github/workflows/ci.yml with one difference: the
+# job runs on the PC runner (label windows), not on windows-latest. Since the folder
+# .gitea/workflows exists, Gitea reads checks only from here. When changing the
+# checks, edit both files.
+#
+# The PC has MudRunner installed, so here the full suite runs: all mods and the
+# Workshop folders are built from the game files and checked (every truck and
+# wheel of the base game and the DLC, no zero divisors, chain, no personal data).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: windows
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # The PC's Python (3.13) in its own environment, not setup-python: that one
+      # installs Python with an installer that needs admin rights - the runner has none.
+      - name: Python environment
+        run: |
+          py -3.13 -m venv .ci-venv
+          [IO.File]::AppendAllText($env:GITHUB_PATH, "$((Resolve-Path .ci-venv).Path)\Scripts`n")
+
+      - name: Dependencies
+        run: pip install -r tools/requirements.txt
+
+      - name: Tests
+        run: python -m unittest discover -s tests -v
