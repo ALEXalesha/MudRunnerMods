@@ -20,4 +20,6 @@ Fixed after the first in-game test (the game skipped the main menu and crashed o
 
 Fixed after the second in-game test (the game crashed on "Single player"): FuelCapacity 100,000 and Damage Capacity 1,000,000 were over the exe's limit of 64,000, Hyper Power torque over 1,000,000; the exe clamps such values and reports them through its XML error logger. `tools/engine_limits.py` holds the limits (read back from the exe in the tests) and the build stops on any value outside. Hyper Power is opt-in in `install_local.py` too.
 
+Fixed after the third in-game test (single mods: plants and wheels work, truck files crash "Single player" and Esc): the six truck mods ship heir classes (`otf_kamaz4310` inherits `kamaz4310`) instead of replacing stock truck files; the build refuses a package that replaces one. Probe packages (`tools/build_probe.py`, `install_local.py --probe [changed]`).
+
 Tools: tolerant class XML parser and inheritance resolver, local packages for Config.xml MediaPath, custom packages (`--only`), Workshop folders for the MudRunner Editor (inherited base-game trucks), Config.xml installer with backup, test suite and mutation check.

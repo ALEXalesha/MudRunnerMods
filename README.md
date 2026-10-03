@@ -12,6 +12,8 @@ The repository holds no game files. `tools/build_mods.py` reads the class XML fr
 
 Ten ideas, nine mods. The fog of war cannot be removed with game files (see "Not possible").
 
+**Since the third in-game test the six truck mods add NEW trucks** (heirs of the stock ones, e.g. `otf_kamaz4310` = C-4310 with Infinite Fuel) instead of replacing the stock truck files: replacing a stock `classes/trucks/*.xml` crashed the game on "Single player". Pick the new trucks in the truck slots at map start or spawn them in the Proving Ground; the trucks placed on the maps stay stock. Grippy Wheels, Winch Anchors and Unlocked Trucks still replace stock wheel, plant and level files (wheel and plant replacement was tested and works).
+
 | Mod (package) | What it changes | Covers |
 |---|---|---|
 | Hyper Power (`OpenTrail_Hyper_Power.zip`) | `Motor@Torque` x10, capped at 1,000,000 (the game's limit). For fun. Replaces Powerful Engines; opt-in | 36 drivable trucks, base + DLC |
@@ -114,6 +116,18 @@ With the safe set the main menu opened, but the game crashed on "Single player",
 
 The texture and mesh caches (`TextureCache.zip` as `_t/`, `MeshCache.zip` as `_m/`) are keyed by mesh and texture names (`_m/trucks_kamaz4310`); the exe falls back to `MeshCache/` and the source `meshes/` / `textures/` folders. Class XML files are not part of any cache, and the packages ship no mesh or texture, so a changed truck XML cannot make a cache entry stale. Workshop items ship their own `_m/` and `_t/` entries only because they bring new meshes.
 
+## Third in-game test: stock truck files cannot be replaced
+
+Single-mod probes in game: Winch Anchors alone (plant files) and Grippy Wheels alone (wheel files) work; Infinite Fuel alone (truck files, only `FuelCapacity` changed, 64,000, within the limits) crashes on "Single player" and on Esc. The byte comparison shows nothing else changed in those files. So replacing a stock truck class is the problem itself. A likely mechanism, found in the exe: saves and the profile store a checksum per truck (`dwTruckCRC`), and the loader skips a truck whose XML changed ("Not loading truck %d because XML or mesh has changed"); the "Single player" screen reads the saves (active trucks per map), the Esc menu too. Probes to tell it apart from the mount itself:
+
+```
+.venv\Scripts\python tools\build_probe.py
+.venv\Scripts\python tools\install_local.py --probe --apply            (3 stock files, byte-identical)
+.venv\Scripts\python tools\install_local.py --probe changed --apply    (uaz469.xml, FuelCapacity 80 -> 81)
+```
+
+Either way the fix is the same: the truck mods ship heir classes with their own names (`otf_`, `otd_`, `otp_`, `oth_`, `ota_`, `otw_`; combined `otc_` for `--only`), exactly like Workshop items, so no stock truck file is replaced. The build stops if a package would replace one, and a test checks every package. Back up `%APPDATA%\SpinTires MudRunner\UserSaves` before testing: the game rewrote a save during a modded run (cnt6vfqa.sts, 04.10 01:26).
+
 ## Load order and shared files
 
 Top to bottom (`mods/order.json`), the same order as the MediaPath lines:
@@ -174,7 +188,7 @@ A mod in `mods/<name>/mod.json` states the effective value every target must hav
 - the Config.xml editor on a copy: the default is the safe set without opt-in mods and says so; no personal data in any tracked file, package or Workshop file;
 - parser laws over generated XML (hypothesis, 400 examples; `HYPOTHESIS_PROFILE=thorough` for 4000).
 
-`tools/mutation_check.py` breaks the product in 26 places in a temp copy (wrong values, no chain, no `replaces`, wrong lock byte, LF instead of CRLF, a planted e-mail, broken inheritance merge, ...) and checks that the named test fails each time.
+`tools/mutation_check.py` breaks the product in 27 places in a temp copy (wrong values, no chain, no `replaces`, wrong lock byte, LF instead of CRLF, a planted e-mail, broken inheritance merge, ...) and checks that the named test fails each time.
 
 ## Files
 
