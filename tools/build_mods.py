@@ -27,6 +27,7 @@ Ops in mod.json ("ops": [...]):
   ... "set": "100000"                    set a value
   ... "map": {"none": "full", "": "full"} replace listed values ("" = attribute missing)
   ... "scale": 2.5, "min": 2.5           scale, then raise to at least min
+  ... "scale": 10, "max": 1000000        scale, then cap (engine limits: tools/engine_limits.py)
   {"kind": "trucks", "only": "drivable", "path": "TruckData/Damage", "fording": {...}}
   {"kind": "plants", "names": [...], "winch_socket": {...}}
   {"levels": ["level_*"], "unlock_trucks": true}   level files (binary .stg)
@@ -56,6 +57,7 @@ import sys
 import zipfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import engine_limits  # noqa: E402
 import mrxml  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -196,6 +198,8 @@ def desired_values(op, node, where):
         v = _num(old, where) * op["scale"]
         if "min" in op:
             v = max(v, op["min"])
+        if "max" in op:
+            v = min(v, op["max"])
         return {attr: mrxml.fmt_num(v, old)}
     raise BuildError("unknown op %r" % op)
 
@@ -484,6 +488,9 @@ def build_all(game_dir, out_dir=None, only=None, skip_levels=False, verbose=True
             b.files[path] = p.overlay[path]
             b.file_mods[path] = [n for n in reversed(names) if path in touched[n]]
         b.log = p.log
+        bad = limit_violations(fs, b.files)
+        if bad:
+            raise BuildError("custom: value outside the game's limits: %s" % (bad[0],))
         levels = sorted(set(l for n in names for l in plans[n][2]))
         _levels(b, fs, levels, skip_levels)
         if out_dir:
@@ -503,6 +510,9 @@ def build_all(game_dir, out_dir=None, only=None, skip_levels=False, verbose=True
         _levels(b, fs, plans[name][2], skip_levels)
         if not b.files and not plans[name][2]:
             raise BuildError("%s changes nothing" % name)
+        bad = limit_violations(fs, b.files)
+        if bad:
+            raise BuildError("%s: value outside the game's limits: %s" % (name, bad[0]))
         result[name] = b
         if out_dir:
             os.makedirs(out_dir, exist_ok=True)
@@ -513,6 +523,23 @@ def build_all(game_dir, out_dir=None, only=None, skip_levels=False, verbose=True
                                                           (" -> " + b.zip_path) if b.zip_path else ""))
             summarize(b)
     return result
+
+
+def limit_violations(fs, files):
+    """Effective values outside the exe's limits, for every truck and wheel class
+    over the package `files`: [(kind, class, tag, attr, value, (lo, hi))]."""
+    r = mrxml.Resolver(mrxml.Layer(fs, files))
+    out = []
+    for kind in ("trucks", "wheels"):
+        for n in fs.class_names(kind):
+            root, _chain = r.resolve(kind, n)
+            stack = [root]
+            while stack:
+                node = stack.pop()
+                for attr, val, rng in engine_limits.violations(node.tag, node.attrs):
+                    out.append((kind, n, node.tag, attr, val, rng))
+                stack.extend(node.children)
+    return out
 
 
 def _levels(b, fs, levels, skip_levels):

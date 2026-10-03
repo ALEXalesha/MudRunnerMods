@@ -10,13 +10,14 @@
       "only": "drivable",
       "path": "TruckData/Motor",
       "attr": "Torque",
-      "scale": 10
+      "scale": 10,
+      "max": 1000000
     }
   ],
   "workshop": {
     "short": "HYPER\nPOWER",
-    "tag_en": "Engine torque x10, just for fun",
-    "tag_ru": "Момент x10, ради веселья",
+    "tag_en": "Engine torque x10 (cap 1 000 000)",
+    "tag_ru": "Момент x10 (предел 1 000 000)",
     "bg": [
       60,
       0,
@@ -28,11 +29,11 @@
       255
     ],
     "en": [
-      "Engine torque of every truck x10. For fun: wheels spin easily, trucks climb almost anything and can flip.",
+      "Engine torque of every truck x10, but not above 1,000,000, the most the game accepts (so the heaviest trucks get about x4). For fun: wheels spin easily, trucks climb almost anything and can flip.",
       "Replaces Powerful Engines (the torque is x10 of stock, not x25)."
     ],
     "ru": [
-      "Крутящий момент двигателя каждого грузовика x10. Ради веселья: колёса легко буксуют, грузовики лезут почти куда угодно и могут перевернуться.",
+      "Крутящий момент двигателя каждого грузовика x10, но не больше 1 000 000 - больше игра не принимает (у самых тяжёлых грузовиков выходит около x4). Ради веселья: колёса легко буксуют, грузовики лезут почти куда угодно и могут перевернуться.",
       "Заменяет Powerful Engines (момент x10 от обычного, а не x25)."
     ]
   }

@@ -27,17 +27,18 @@ def check_truck(test, mod, name, s, p):
     """Assert the effective result of `mod` on drivable truck `name` (s = stock root, p = patched)."""
     where = "%s %s" % (mod, name)
     if mod == "infinite_fuel":
-        test.assertEqual(p.find("TruckData")[0].get("FuelCapacity"), "100000", where)
+        test.assertEqual(p.find("TruckData")[0].get("FuelCapacity"), "64000", where)
     elif mod == "no_damage":
         dm = p.find("TruckData/Damage")
         test.assertTrue(dm, where)
         for d in dm:
-            test.assertEqual(d.get("Capacity"), "1000000", where)
+            test.assertEqual(d.get("Capacity"), "64000", where)
     elif mod in ("powerful_engines", "hyper_power"):
         k = 2.5 if mod == "powerful_engines" else 10
         so = float(s.find("TruckData/Motor")[0].get("Torque"))
         pa = float(p.find("TruckData/Motor")[0].get("Torque"))
-        test.assertAlmostEqual(pa, so * k, delta=1.0, msg=where)
+        want = so * k if mod == "powerful_engines" else min(so * k, 1000000.0)
+        test.assertAlmostEqual(pa, want, delta=1.0, msg=where)
     elif mod == "awd_difflock":
         wheels = p.find("Wheels/Wheel")
         test.assertTrue(wheels, where)
@@ -206,7 +207,7 @@ class BuiltModsTest(unittest.TestCase):
         for n in drivable_trucks():
             so = float(stock().resolve("trucks", n)[0].find("TruckData/Motor")[0].get("Torque"))
             self.assertAlmostEqual(float(r.resolve("trucks", n)[0].find("TruckData/Motor")[0].get("Torque")),
-                                   so * 10, delta=1.0, msg=n)
+                                   min(so * 10, 1000000.0), delta=1.0, msg=n)
 
     def test_custom_package_has_exactly_the_chosen_mods(self):
         b = build_mods.build_all(common.GAME, None, only=["infinite_fuel", "no_damage"], skip_levels=True,
