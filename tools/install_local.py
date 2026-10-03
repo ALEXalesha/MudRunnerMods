@@ -5,6 +5,7 @@
   python tools/install_local.py --all --apply        # also the opt-in mods
   python tools/install_local.py --mods no_damage,infinite_fuel --apply
   python tools/install_local.py --remove --apply     # take all OpenTrail lines out
+  python tools/install_local.py --probe --apply      # only the byte-identical probe
 
 The safe set is every mod except those listed under "opt_in" in mods/order.json
 (Unlocked Trucks: it replaces whole level files). The script prints exactly
@@ -98,6 +99,9 @@ def _is_ours(line):
 
 
 def game_running():
+    # the tests set this: the CI runner is the same PC, the game may be open there
+    if os.environ.get("OPENTRAIL_NO_GAME_CHECK") == "1":
+        return False
     try:
         out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq MudRunner.exe", "/NH"],
                              capture_output=True, timeout=30).stdout.decode("ascii", "replace")
@@ -111,20 +115,30 @@ def main():
     ap.add_argument("--config", default=DEFAULT_CONFIG)
     ap.add_argument("--local", default=os.path.join(build_mods.ROOT, "build", "local"))
     ap.add_argument("--mods", help="comma separated mod names (default: the safe set)")
-    ap.add_argument("--all", action="store_true", help="include the opt-in mods (Unlocked Trucks)")
+    ap.add_argument("--all", action="store_true", help="include the opt-in mods (Hyper Power, Unlocked Trucks)")
+    ap.add_argument("--probe", action="store_true",
+                    help="install only OpenTrail_Probe_Identical.zip (stock files, tools/build_probe.py)")
     ap.add_argument("--remove", action="store_true")
     ap.add_argument("--apply", action="store_true")
     a = ap.parse_args()
     if not os.path.isfile(a.config):
         raise SystemExit("Config.xml not found: %s (start the game once)" % a.config)
     mods = None
-    if not a.remove:
+    if a.probe:
+        probe = os.path.abspath(os.path.join(a.local, "OpenTrail_Probe_Identical.zip"))
+        if not os.path.isfile(probe):
+            raise SystemExit("probe not built: run tools/build_probe.py first")
+        print("Installing the probe only (3 stock files, byte-identical): " + probe)
+        packages = [probe]
+        mods = []
+    elif not a.remove:
         mods = chosen_mods([x.strip() for x in a.mods.split(",")] if a.mods else None, a.all)
         left = [n for n in build_mods.load_order() if n not in mods]
         print("Installing %d mods (top = highest priority): %s" % (len(mods), ", ".join(mods)))
         print("Not installed: %s" % (", ".join(left) or "-"))
-    packages = [] if a.remove else packages_in_order(a.local, mods)
-    if not a.remove and len(packages) != len(mods):
+    if not a.probe:
+        packages = [] if a.remove else packages_in_order(a.local, mods)
+    if not a.remove and not a.probe and len(packages) != len(mods):
         raise SystemExit("not every package is built in %s: run tools/build_mods.py first" % a.local)
     with open(a.config, encoding="utf-8", newline="") as fh:
         old = fh.read()

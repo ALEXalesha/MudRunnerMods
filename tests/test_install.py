@@ -60,9 +60,11 @@ class ConfigEditTest(unittest.TestCase):
         for name in install_local.build_mods.load_order():
             spec = install_local.build_mods.load_spec(name)
             open(os.path.join(local, install_local.build_mods.zip_name(spec)), "wb").close()
+        open(os.path.join(local, "OpenTrail_Probe_Identical.zip"), "wb").close()
+        env = dict(os.environ, OPENTRAIL_NO_GAME_CHECK="1")    # the game may be open on this PC
         r = subprocess.run([sys.executable, os.path.join(common.ROOT, "tools", "install_local.py"),
                             "--config", cfg, "--local", local] + list(args),
-                           capture_output=True, text=True, timeout=120)
+                           capture_output=True, text=True, timeout=120, env=env)
         text = open(cfg, encoding="utf-8").read()
         backups = [f for f in os.listdir(tmp) if f.startswith("Config.xml.opentrail-")]
         backup = open(os.path.join(tmp, backups[0]), encoding="utf-8").read() if backups else None
@@ -87,6 +89,14 @@ class ConfigEditTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertEqual(text.count("OpenTrail_"), 2)
         self.assertLess(text.index("No_Damage"), text.index("Unlocked_Trucks"))     # load order kept
+
+    def test_probe_only(self):
+        r, text, _b = self.run_tool("--probe", "--apply")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(text.count("OpenTrail_"), 1)
+        self.assertIn("OpenTrail_Probe_Identical.zip", text)
+        r2, text2, _b = self.run_tool("--remove", "--apply")
+        self.assertEqual(r2.returncode, 0, r2.stdout + r2.stderr)
 
     def test_dry_run_writes_nothing(self):
         r, text, backup = self.run_tool()
