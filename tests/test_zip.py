@@ -74,5 +74,15 @@ class ZipLawTest(unittest.TestCase):
         self.assertEqual(zipcheck.problems(path), [])
 
 
+    @unittest.skipUnless(HAVE_GAME, "game not installed")
+    def test_probe_is_byte_identical(self):
+        import build_probe
+        out = build_probe.build(tempfile.mkdtemp(prefix="mrprobe_"), GAME)
+        with zipfile.ZipFile(out) as z:
+            for p in build_probe.PROBE_FILES:
+                self.assertEqual(z.read(p), common.fs().read(p), p)
+        self.assertEqual(zipcheck.problems(out), [])
+
+
 if __name__ == "__main__":
     unittest.main()
