@@ -16,4 +16,6 @@ Mods (public names "OpenTrail ..."):
 - **Unlocked Trucks**: isLocked cleared for 24 trucks and trailers on 6 maps.
 - Not possible as a file mod: fog of war (saves and profile only), winch length and force, fuel consumption.
 
+Fixed after the first in-game test (the game skipped the main menu and crashed on Esc): the Unlocked Trucks zip had Zip64 local headers that the game's PhysFS 2.0 rejects. Level files are now plain zip 2.0 entries; `tools/zipcheck.py` checks every package; `install_local.py` installs the safe set (without Unlocked Trucks) unless `--all` or `--mods` is given, and prints the list.
+
 Tools: tolerant class XML parser and inheritance resolver, local packages for Config.xml MediaPath, custom packages (`--only`), Workshop folders for the MudRunner Editor (inherited base-game trucks), Config.xml installer with backup, test suite and mutation check.

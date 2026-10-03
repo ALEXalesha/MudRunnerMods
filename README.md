@@ -77,16 +77,23 @@ The game reads extra files through `<MediaPath>` lines in its Config.xml. The fi
    ```
    .venv\Scripts\python tools\install_local.py
    .venv\Scripts\python tools\install_local.py --apply
+   .venv\Scripts\python tools\install_local.py --all --apply
    .venv\Scripts\python tools\install_local.py --mods no_damage,infinite_fuel --apply
    ```
-   It edits `%APPDATA%\SpinTires MudRunner\Config.xml` (the file the game saves on exit), removes older OpenTrail lines, inserts the new ones above `<MediaPath Path="Media.zip" />` in the load order below and keeps a backup `Config.xml.opentrail-<time>` next to it.
+   Without `--mods` it installs the safe set: every mod except the opt-in ones (`"opt_in"` in `mods/order.json`, now Unlocked Trucks, because it replaces whole level files). `--all` adds them. The script prints which mods it installs and which it leaves out. It edits `%APPDATA%\SpinTires MudRunner\Config.xml` (the file the game saves on exit), removes older OpenTrail lines, inserts the new ones above `<MediaPath Path="Media.zip" />` in the load order below and keeps a backup `Config.xml.opentrail-<time>` next to it.
 
    By hand: add lines like `<MediaPath Path="D:/Games/OpenTrail/OpenTrail_No_Damage.zip" />` above `<MediaPath Path="Media.zip" />`.
-3. Start the game. `%APPDATA%\SpinTires MudRunner\Log.txt` must show `MediaPath '...OpenTrail_...zip' added.` for each package. `Cant add MediaPath` means a wrong path.
+3. Start the game. The current game build no longer writes `%APPDATA%\SpinTires MudRunner\Log.txt` (it stays from January 2026 even after normal runs without mods, while the profile and Config.xml are rewritten), and a crash leaves no local dump (the exe hands crashes to `SteamAPI_WriteMiniDump`; `Steam\dumps` has nothing from MudRunner). So the check is in game: the main menu appears as usual, and with Infinite Fuel a truck's tank reads 100000 l.
 4. For Unlocked Trucks start a new game on the map.
 5. To remove: `install_local.py --remove --apply`, or delete the lines.
 
 Single player only: the exe compares hashes of the truck, wheel and template files for multiplayer.
+
+## What went wrong in the first test, and the zip law
+
+The first in-game test of 1.0.0 (all nine packages) did not reach the main menu: the game went straight into a map and crashed on Esc. Without packages it worked. The cause, found without starting the game: the Unlocked Trucks zip. Python's streaming zip writer, called with `force_zip64=True`, wrote the six level files with Zip64 local headers ("version needed" 4.5, sizes 0xFFFFFFFF, a Zip64 extra field) while the central directory held the real sizes. MudRunner reads zips with PhysFS 2.0 (its messages "ZIP bigger than 2 gigs?!" and "Corrupted archive" are in the exe). That version has no Zip64 support and compares every local header with the central directory before it opens a file, so all six level files were "corrupted". The first archive that lists a path owns it, so the game did not fall back to Media.zip either.
+
+`tools/zipcheck.py` checks these PhysFS 2.0 rules: no Zip64 anywhere, local header = central directory (version, method, CRC, sizes), deflate or store only, under 2 GB. Media.zip, the DLC archives, MeshCache.zip and all 8 Workshop items installed on this PC pass; the 1.0.0 level package failed with 24 problems. The build now runs the check on every package and stops on any problem, and the level files are written as plain zip 2.0 entries (size given up front). The class-file packages were always fine.
 
 ## Load order and shared files
 
@@ -143,10 +150,11 @@ A mod in `mods/<name>/mod.json` states the effective value every target must hav
 - the chain: an upper package alone keeps the lower mods' changes in shared files; Hyper Power is x10, not x25; a custom package holds exactly the chosen mods;
 - all 25 level files parse; unlocking changes exactly the `isLocked` bytes; streamed level copies are identical apart from them;
 - the Workshop folders: only `.xml` and `.png`, lowercase unique names, no name that shadows a stock file, `strings.xml` names every class, 512x512 preview, CRLF copy-paste texts in English and Russian, every inherited truck resolves to the planned values with nothing else changed, base-game parents only;
-- the Config.xml editor on a copy; no personal data in any tracked file, package or Workshop file;
+- the zip law (`tools/zipcheck.py`): every package passes the PhysFS 2.0 rules; the stock archives and the Workshop items on this PC pass it too; a Zip64 zip fails it;
+- the Config.xml editor on a copy: the default is the safe set without opt-in mods and says so; no personal data in any tracked file, package or Workshop file;
 - parser laws over generated XML (hypothesis, 400 examples; `HYPOTHESIS_PROFILE=thorough` for 4000).
 
-`tools/mutation_check.py` breaks the product in 21 places in a temp copy (wrong values, no chain, no `replaces`, wrong lock byte, LF instead of CRLF, a planted e-mail, broken inheritance merge, ...) and checks that the named test fails each time.
+`tools/mutation_check.py` breaks the product in 23 places in a temp copy (wrong values, no chain, no `replaces`, wrong lock byte, LF instead of CRLF, a planted e-mail, broken inheritance merge, ...) and checks that the named test fails each time.
 
 ## Files
 
@@ -157,7 +165,8 @@ A mod in `mods/<name>/mod.json` states the effective value every target must hav
 | `tools/mrxml.py` | Parser, resolver, text edits |
 | `tools/build_mods.py` | Local packages |
 | `tools/build_workshop.py` | Workshop folders and release assets |
-| `tools/install_local.py` | Config.xml lines |
+| `tools/install_local.py` | Config.xml lines (safe set by default) |
+| `tools/zipcheck.py` | Can the game's PhysFS 2.0 read a zip |
 | `tools/mutation_check.py` | Mutation check |
 | `tools/publish_github.sh` | Copy to GitHub without personal data (run only after the in-game test) |
 | `docs/research.md` | How MudRunner mods work, with sources |

@@ -32,6 +32,15 @@ stock files in `Media.zip` and the DLC archives.
   attribute and is the one to edit, with the game closed.
 - The DLC archives hold only new files: no path is in two archives (checked for
   all 1135 files).
+- Archive reader: PhysFS 2.0 (exe messages "ZIP bigger than 2 gigs?!",
+  "Corrupted archive", "buffer must fit in 32-bits"). No Zip64; a file opens only
+  if its local header matches the central directory. The first archive that
+  lists a path owns it, there is no fallback to a later archive.
+  `tools/zipcheck.py` checks this; all stock archives and the Workshop items on
+  this PC pass.
+- Logs: the exe still names `Log.txt`, but the current build did not write it in
+  any run since January 2026 (with or without mods). Crashes go to
+  `SteamAPI_WriteMiniDump`; no MudRunner dump in `Steam\dumps`.
 - Multiplayer: the exe hashes `classes/trucks/`, `classes/wheels/`,
   `_templates/`, `media.xml` and levels and shows `game_game_version_modified`.
   Override packages are for single player.
