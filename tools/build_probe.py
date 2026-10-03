@@ -1,7 +1,8 @@
 """Probe package: stock files, byte-identical, through the same install path.
 
   .venv\\Scripts\\python tools\\build_probe.py
-  .venv\\Scripts\\python tools\\install_local.py --probe --apply
+  .venv\\Scripts\\python tools\\install_local.py --probe --apply           (identical)
+  .venv\\Scripts\\python tools\\install_local.py --probe changed --apply   (one value changed)
 
 It ships three files copied unchanged from the game archives (one truck, one
 wheel, one plant) in a zip written exactly like the mod packages. If the game
@@ -21,6 +22,7 @@ import zipcheck  # noqa: E402
 
 PROBE_FILES = ["classes/trucks/uaz469.xml", "classes/wheels/kamaz_offroad.xml", "classes/plants/stump_b.xml"]
 PROBE_ZIP = "OpenTrail_Probe_Identical.zip"
+CHANGED_ZIP = "OpenTrail_Probe_Changed.zip"     # uaz469.xml with FuelCapacity 80 -> 81, nothing else
 
 
 def build(out_dir, game=build_mods.DEFAULT_GAME):
@@ -40,5 +42,22 @@ def build(out_dir, game=build_mods.DEFAULT_GAME):
     return out
 
 
+def build_changed(out_dir, game=build_mods.DEFAULT_GAME):
+    """One stock truck file with one value changed in place (80 -> 81 litres)."""
+    fs = mrxml.GameFs(game)
+    os.makedirs(out_dir, exist_ok=True)
+    path = "classes/trucks/uaz469.xml"
+    old = fs.read(path)
+    if old.count(b'FuelCapacity="80"') != 1:
+        raise build_mods.BuildError("uaz469.xml changed in the game: no single FuelCapacity=\"80\"")
+    b = build_mods.Built("probe_changed", {"title": "Probe Changed"})
+    b.files[path] = old.replace(b'FuelCapacity="80"', b'FuelCapacity="81"')
+    out = os.path.join(out_dir, CHANGED_ZIP)
+    build_mods.write_package(b, fs, out)
+    return out
+
+
 if __name__ == "__main__":
-    print(build(os.path.join(build_mods.ROOT, "build", "local")))
+    local = os.path.join(build_mods.ROOT, "build", "local")
+    print(build(local))
+    print(build_changed(local))
