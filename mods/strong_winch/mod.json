@@ -1,0 +1,50 @@
+{
+  "id": "strong_winch",
+  "title": "Winch Anchors",
+  "version": "1.0.0",
+  "ops": [
+    {
+      "kind": "plants",
+      "names": [
+        "stump_b"
+      ],
+      "winch_socket": {
+        "pos": "(0; 0.6; 0)"
+      }
+    },
+    {
+      "kind": "plants",
+      "names": [
+        "fir_small_b",
+        "pine_small_b",
+        "small_tree_c",
+        "small_tree_d"
+      ],
+      "winch_socket": {
+        "pos": "(0; 0.6; 0)",
+        "parent_frame": "BoneRoot_cdt"
+      }
+    },
+    {
+      "kind": "plants",
+      "names": [
+        "small_tree_a",
+        "small_tree_b"
+      ],
+      "winch_socket": {
+        "pos": "(0; 0.6; 0)",
+        "parent_frame": "Bone1_cdt"
+      }
+    }
+  ],
+  "about": {
+    "en": [
+      "Winch anchors on stumps and small trees that had none (stump_b, small_tree_a to d, fir_small_b, pine_small_b). Trucks and trailers already all have anchor points in the base game.",
+      "Cable length and pull force are fixed in the game engine (no attribute in any file), so they cannot be changed by a mod. Small trees can still be uprooted when pulled hard."
+    ],
+    "ru": [
+      "Точки для лебёдки на пнях и маленьких деревьях, где их не было (stump_b, small_tree_a..d, fir_small_b, pine_small_b). У всех грузовиков и прицепов точки крепления есть и в обычной игре.",
+      "Длина троса и сила тяги заданы в движке игры (ни в одном файле такого параметра нет), поэтому модом их не изменить. Маленькое дерево при сильной тяге всё так же можно вырвать."
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "id": "powerful_engines",
+  "title": "Powerful Engines",
+  "version": "1.0.0",
+  "workshop_prefix": "otp",
+  "workshop_suffix": "Powerful",
+  "ops": [
+    {
+      "kind": "trucks",
+      "only": "drivable",
+      "path": "TruckData/Motor",
+      "attr": "Torque",
+      "scale": 2.5
+    }
+  ],
+  "workshop": {
+    "short": "POWERFUL\nENGINES",
+    "tag_en": "Engine torque x2.5",
+    "tag_ru": "Крутящий момент x2,5",
+    "bg": [
+      30,
+      40,
+      90
+    ],
+    "accent": [
+      110,
+      190,
+      255
+    ],
+    "en": [
+      "Engine torque of every truck x2.5 (Motor Torque, stock 16,000 to 240,000). Trucks pull much harder in mud and uphill and still drive normally.",
+      "Use either this or Hyper Power, not both."
+    ],
+    "ru": [
+      "Крутящий момент двигателя каждого грузовика x2,5 (Motor Torque, в игре от 16 000 до 240 000). Грузовики заметно сильнее тянут в грязи и в гору и при этом нормально едут.",
+      "Используйте либо этот мод, либо Hyper Power, не оба."
+    ]
+  }
+}

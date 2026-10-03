@@ -1,0 +1,39 @@
+{
+  "id": "infinite_fuel",
+  "title": "Infinite Fuel",
+  "version": "1.0.0",
+  "workshop_prefix": "otf",
+  "workshop_suffix": "Infinite Fuel",
+  "ops": [
+    {
+      "kind": "trucks",
+      "only": "drivable",
+      "path": "TruckData",
+      "attr": "FuelCapacity",
+      "set": "100000"
+    }
+  ],
+  "workshop": {
+    "short": "INFINITE\nFUEL",
+    "tag_en": "100 000 litre tank",
+    "tag_ru": "Бак на 100 000 литров",
+    "bg": [
+      20,
+      70,
+      40
+    ],
+    "accent": [
+      120,
+      255,
+      120
+    ],
+    "en": [
+      "Every truck gets a 100,000 litre fuel tank (stock 40 to 800 litres). MudRunner has no fuel consumption setting in the truck files: consumption is computed in the game engine, so a huge tank is the only file-level way to never run dry.",
+      "Fuel stations still work; addon tanks and cisterns are not changed."
+    ],
+    "ru": [
+      "У каждого грузовика бак на 100 000 литров (в игре от 40 до 800). В файлах грузовиков MudRunner нет настройки расхода топлива: расход считает движок игры, поэтому огромный бак - единственный способ на уровне файлов никогда не остаться без топлива.",
+      "Заправки работают как раньше, баки дополнений и цистерны не меняются."
+    ]
+  }
+}

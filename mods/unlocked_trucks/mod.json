@@ -1,0 +1,23 @@
+{
+  "id": "unlocked_trucks",
+  "title": "Unlocked Trucks",
+  "version": "1.0.0",
+  "ops": [
+    {
+      "levels": [
+        "level_*"
+      ],
+      "unlock_trucks": true
+    }
+  ],
+  "about": {
+    "en": [
+      "Trucks and trailers that wait locked on the maps are unlocked at the start of a new game: the isLocked flag of every truck record in the level files (levels/level_*.stg) is cleared.",
+      "Works for a new game or a restarted map; existing saves keep their own truck state. The trucks you may pick for the start slots are kept in the profile and are not changed."
+    ],
+    "ru": [
+      "Грузовики и прицепы, которые стоят запертыми на картах, открыты с начала новой игры: в файлах уровней (levels/level_*.stg) у каждой записи грузовика снят флаг isLocked.",
+      "Действует для новой игры или перезапущенной карты; в старых сохранениях состояние грузовиков своё. Список грузовиков для стартовых слотов хранится в профиле и не меняется."
+    ]
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "id": "awd_difflock",
+  "title": "AWD and Diff Lock",
+  "version": "1.0.0",
+  "workshop_prefix": "ota",
+  "workshop_suffix": "AWD",
+  "ops": [
+    {
+      "kind": "trucks",
+      "only": "drivable",
+      "path": "Wheels/Wheel",
+      "attr": "Torque",
+      "map": {
+        "none": "full",
+        "": "full"
+      }
+    },
+    {
+      "kind": "trucks",
+      "only": "drivable",
+      "path": "TruckData",
+      "attr": "DiffLockType",
+      "map": {
+        "None": "Default"
+      }
+    }
+  ],
+  "workshop": {
+    "short": "AWD +\nDIFF LOCK",
+    "tag_en": "On every truck",
+    "tag_ru": "На каждом грузовике",
+    "bg": [
+      25,
+      60,
+      70
+    ],
+    "accent": [
+      90,
+      255,
+      230
+    ],
+    "en": [
+      "Every truck can switch on all-wheel drive and the differential lock.",
+      "In MudRunner the drive of each wheel is set in the truck file (Torque: default = always driven, full = driven when AWD is on, none = never). Wheels with none get full. Trucks without a diff lock (DiffLockType=None) get a switchable one (Default); trucks with a permanent lock keep it."
+    ],
+    "ru": [
+      "Каждый грузовик может включить полный привод и блокировку дифференциала.",
+      "В MudRunner привод каждого колеса задан в файле грузовика (Torque: default - ведущее всегда, full - ведущее при включённом полном приводе, none - никогда). Колёса с none получают full. Грузовики без блокировки (DiffLockType=None) получают включаемую (Default); у кого блокировка постоянная, та остаётся."
+    ]
+  }
+}

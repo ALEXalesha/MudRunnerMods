@@ -1,0 +1,46 @@
+{
+  "id": "grippy_wheels",
+  "title": "Grippy Wheels",
+  "version": "1.0.0",
+  "workshop_prefix": "otg",
+  "workshop_suffix": "Grippy",
+  "ops": [
+    {
+      "kind": "wheels",
+      "path": "WheelFriction",
+      "attr": "SubstanceFriction",
+      "scale": 2.5,
+      "min": 2.5
+    },
+    {
+      "kind": "wheels",
+      "path": "WheelFriction",
+      "attr": "BodyFriction",
+      "scale": 1.5,
+      "min": 2.0
+    }
+  ],
+  "workshop": {
+    "short": "GRIPPY\nWHEELS",
+    "tag_en": "Mud and water grip x2.5",
+    "tag_ru": "Сцепление в грязи и воде x2,5",
+    "bg": [
+      50,
+      40,
+      25
+    ],
+    "accent": [
+      255,
+      210,
+      90
+    ],
+    "en": [
+      "Every wheel type grips much better: SubstanceFriction (grip in mud and water) x2.5, at least 2.5; BodyFriction (grip on hard ground) x1.5, at least 2.0.",
+      "Stock offroad tyres have 1.2 / 1.0, highway tyres 0.5 / 1.5."
+    ],
+    "ru": [
+      "Все типы колёс держат дорогу намного лучше: SubstanceFriction (сцепление в грязи и воде) x2,5, не меньше 2,5; BodyFriction (сцепление на твёрдом) x1,5, не меньше 2,0.",
+      "В игре у внедорожных шин 1,2 / 1,0, у дорожных 0,5 / 1,5."
+    ]
+  }
+}

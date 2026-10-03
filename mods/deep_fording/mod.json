@@ -1,0 +1,41 @@
+{
+  "id": "deep_fording",
+  "title": "Deep Fording",
+  "version": "1.0.0",
+  "workshop_prefix": "otw",
+  "workshop_suffix": "Deep Fording",
+  "ops": [
+    {
+      "kind": "trucks",
+      "only": "drivable",
+      "path": "TruckData/Damage",
+      "fording": {
+        "lift": 1.0,
+        "height": 0.2
+      }
+    }
+  ],
+  "workshop": {
+    "short": "DEEP\nFORDING",
+    "tag_en": "No water damage, no stalling",
+    "tag_ru": "Вода не глушит мотор",
+    "bg": [
+      15,
+      45,
+      85
+    ],
+    "accent": [
+      120,
+      200,
+      255
+    ],
+    "en": [
+      "Trucks cross deep water without water damage and without the engine stalling.",
+      "The game checks water against the truck's damage area (Damage SensationMin/SensationMax). The mod moves that box 1 metre above its old top, so water has to rise far over the cab before it counts. Side effect: the same box is used for collision damage, so the cab takes almost no hit damage."
+    ],
+    "ru": [
+      "Грузовики проходят глубокую воду без повреждений от воды и без заглохшего двигателя.",
+      "Игра проверяет воду по зоне повреждений грузовика (Damage SensationMin/SensationMax). Мод поднимает эту зону на 1 метр выше её прежнего верха, и вода должна подняться намного выше кабины. Побочный эффект: по той же зоне считаются удары, так что кабина почти не получает повреждений от ударов."
+    ]
+  }
+}

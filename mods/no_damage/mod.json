@@ -1,0 +1,39 @@
+{
+  "id": "no_damage",
+  "title": "No Damage",
+  "version": "1.0.0",
+  "workshop_prefix": "otd",
+  "workshop_suffix": "No Damage",
+  "ops": [
+    {
+      "kind": "trucks",
+      "only": "drivable",
+      "path": "TruckData/Damage",
+      "attr": "Capacity",
+      "set": "1000000"
+    }
+  ],
+  "workshop": {
+    "short": "NO\nDAMAGE",
+    "tag_en": "Damage capacity 1 000 000",
+    "tag_ru": "Запас прочности 1 000 000",
+    "bg": [
+      70,
+      30,
+      20
+    ],
+    "accent": [
+      255,
+      170,
+      90
+    ],
+    "en": [
+      "Damage capacity of every truck is 1,000,000 points (stock 160 to 1000). Hits still count, but a truck never gets near broken: no loss of power or steering, no stalling from damage.",
+      "The value is huge but not infinite on purpose: the game divides by it, and 0 would break the damage display."
+    ],
+    "ru": [
+      "Запас прочности каждого грузовика - 1 000 000 очков (в игре от 160 до 1000). Удары засчитываются, но грузовик никогда не подходит к поломке: не теряет мощность и управление, не глохнет от повреждений.",
+      "Значение огромное, но не бесконечное: игра на него делит, а 0 сломал бы показ повреждений."
+    ]
+  }
+}

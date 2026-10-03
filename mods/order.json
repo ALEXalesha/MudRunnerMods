@@ -1,0 +1,16 @@
+{
+  "top_to_bottom": [
+    "hyper_power",
+    "powerful_engines",
+    "awd_difflock",
+    "deep_fording",
+    "no_damage",
+    "infinite_fuel",
+    "grippy_wheels",
+    "strong_winch",
+    "unlocked_trucks"
+  ],
+  "replaces": {
+    "hyper_power": ["powerful_engines"]
+  }
+}

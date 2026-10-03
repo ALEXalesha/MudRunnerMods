@@ -1,0 +1,39 @@
+{
+  "id": "hyper_power",
+  "title": "Hyper Power",
+  "version": "1.0.0",
+  "workshop_prefix": "oth",
+  "workshop_suffix": "Hyper",
+  "ops": [
+    {
+      "kind": "trucks",
+      "only": "drivable",
+      "path": "TruckData/Motor",
+      "attr": "Torque",
+      "scale": 10
+    }
+  ],
+  "workshop": {
+    "short": "HYPER\nPOWER",
+    "tag_en": "Engine torque x10, just for fun",
+    "tag_ru": "Момент x10, ради веселья",
+    "bg": [
+      60,
+      0,
+      90
+    ],
+    "accent": [
+      0,
+      240,
+      255
+    ],
+    "en": [
+      "Engine torque of every truck x10. For fun: wheels spin easily, trucks climb almost anything and can flip.",
+      "Replaces Powerful Engines (the torque is x10 of stock, not x25)."
+    ],
+    "ru": [
+      "Крутящий момент двигателя каждого грузовика x10. Ради веселья: колёса легко буксуют, грузовики лезут почти куда угодно и могут перевернуться.",
+      "Заменяет Powerful Engines (момент x10 от обычного, а не x25)."
+    ]
+  }
+}
