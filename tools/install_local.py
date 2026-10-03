@@ -1,0 +1,123 @@
+"""Turn the local OpenTrail packages on or off in MudRunner's Config.xml.
+
+  python tools/install_local.py                      # dry run: show what would change
+  python tools/install_local.py --apply              # write it (backup first)
+  python tools/install_local.py --mods no_damage,infinite_fuel --apply
+  python tools/install_local.py --remove --apply     # take all OpenTrail lines out
+
+How the game finds the packages: Config.xml lists <MediaPath> entries; the game
+mounts each one (zip or folder, absolute paths work) and uses the FIRST copy of a
+file it finds. So the OpenTrail lines go above <MediaPath Path="Media.zip" />, in
+the order of mods/order.json (top = highest priority).
+
+Which Config.xml: the game saves its settings to
+%APPDATA%\\SpinTires MudRunner\\Config.xml on exit ("Combine config saved to ..."
+in Log.txt) and reads it at start. Run this only with the game closed, or the
+game overwrites the change on exit. A backup Config.xml.opentrail-<time> is
+written next to it before any change. After the first start with the mods,
+Log.txt must show "MediaPath '...OpenTrail_...zip' added." for each package.
+"""
+
+import argparse
+import datetime
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import build_mods  # noqa: E402
+
+DEFAULT_CONFIG = os.path.join(os.environ.get("APPDATA", ""), "SpinTires MudRunner", "Config.xml")
+MARK = "OpenTrail_"
+LINE_RE = re.compile(r'^[ \t]*<MediaPath\b[^>]*Path="([^"]*)"[^>]*/>[ \t]*\r?\n?', re.M)
+
+
+def packages_in_order(local_dir, mods=None):
+    """Absolute paths of the built packages, top priority first."""
+    order = build_mods.load_order()
+    out = []
+    for name in order:
+        if mods and name not in mods:
+            continue
+        p = os.path.join(local_dir, build_mods.zip_name(build_mods.load_spec(name)))
+        if os.path.isfile(p):
+            out.append(os.path.abspath(p))
+        elif mods:
+            raise SystemExit("package not built: %s (run tools/build_mods.py first)" % p)
+    return out
+
+
+def edit_config(text, packages):
+    """Remove old OpenTrail lines, insert `packages` above the Media.zip line."""
+    nl = "\r\n" if "\r\n" in text else "\n"
+    text = "".join(part for part in _split_keep(text) if not _is_ours(part))
+    if not packages:
+        return text
+    m = None
+    for x in LINE_RE.finditer(text):
+        if x.group(1).replace("\\", "/").lower().endswith("media.zip"):
+            m = x
+            break
+    if m is None:
+        raise ValueError("no <MediaPath Path=\"Media.zip\" /> line in Config.xml")
+    indent = re.match(r"[ \t]*", text[m.start():]).group(0)
+    block = "".join('%s<MediaPath Path="%s" />%s' % (indent, p.replace("\\", "/"), nl) for p in packages)
+    return text[:m.start()] + block + text[m.start():]
+
+
+def _split_keep(text):
+    return re.findall(r"[^\n]*\n|[^\n]+$", text)
+
+
+def _is_ours(line):
+    m = LINE_RE.match(line)
+    return bool(m) and MARK in os.path.basename(m.group(1).replace("\\", "/"))
+
+
+def game_running():
+    try:
+        out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq MudRunner.exe", "/NH"],
+                             capture_output=True, timeout=30).stdout.decode("ascii", "replace")
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return "MudRunner.exe" in out
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--config", default=DEFAULT_CONFIG)
+    ap.add_argument("--local", default=os.path.join(build_mods.ROOT, "build", "local"))
+    ap.add_argument("--mods", help="comma separated mod names (default: every built package)")
+    ap.add_argument("--remove", action="store_true")
+    ap.add_argument("--apply", action="store_true")
+    a = ap.parse_args()
+    if not os.path.isfile(a.config):
+        raise SystemExit("Config.xml not found: %s (start the game once)" % a.config)
+    mods = [x.strip() for x in a.mods.split(",")] if a.mods else None
+    packages = [] if a.remove else packages_in_order(a.local, mods)
+    with open(a.config, encoding="utf-8", newline="") as fh:
+        old = fh.read()
+    new = edit_config(old, packages)
+    print("Config.xml:", a.config)
+    for p in packages:
+        print('  <MediaPath Path="%s" />' % p.replace("\\", "/"))
+    if new == old:
+        print("no change")
+        return 0
+    if not a.apply:
+        print("dry run: add --apply to write (the game must be closed)")
+        return 0
+    if game_running():
+        raise SystemExit("MudRunner is running: close it first, it rewrites Config.xml on exit")
+    backup = a.config + ".opentrail-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    shutil.copyfile(a.config, backup)
+    with open(a.config, "w", encoding="utf-8", newline="") as fh:
+        fh.write(new)
+    print("written; backup:", backup)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
