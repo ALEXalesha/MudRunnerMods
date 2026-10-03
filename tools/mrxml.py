@@ -239,6 +239,9 @@ class GameFs(object):
             self._cache[key] = self.zips[arch].read(info)
         return self._cache[key]
 
+    def size(self, path):
+        return self.files[path.lower()][1].file_size
+
     def open(self, path):
         arch, info = self.files[path.lower()]
         return self.zips[arch].open(info)

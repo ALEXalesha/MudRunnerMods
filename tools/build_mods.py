@@ -525,7 +525,13 @@ def _levels(b, fs, levels, skip_levels):
 
 
 def write_package(b, fs, out_path, skip_levels=False):
-    """Zip with the changed files at their Media paths, deflated, no directory entries."""
+    """Zip with the changed files at their Media paths, deflated, no directory entries.
+
+    The game reads zips with PhysFS 2.0: no Zip64, and every local header must match
+    the central directory (tools/zipcheck.py). Level files are streamed, so the entry
+    size is given up front: then Python writes a plain 2.0 header and patches the real
+    sizes into it after the data. (1.0.0 used force_zip64=True here, which wrote
+    Zip64 local headers and made the six level files unreadable in game.)"""
     tmp = out_path + ".part"
     with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as z:
         for path in sorted(b.files):
@@ -537,7 +543,10 @@ def write_package(b, fs, out_path, skip_levels=False):
                 patched_head = b.levels[path][0]
                 zi = zipfile.ZipInfo(path, date_time=(2026, 1, 1, 0, 0, 0))
                 zi.compress_type = zipfile.ZIP_DEFLATED
-                with fs.open(path) as src, z.open(zi, "w", force_zip64=True) as dst:
+                zi.file_size = fs.size(path)
+                if zi.file_size >= zipfile.ZIP64_LIMIT:
+                    raise BuildError("%s is too big for a zip without Zip64" % path)
+                with fs.open(path) as src, z.open(zi, "w") as dst:
                     src.read(len(patched_head))
                     dst.write(patched_head)
                     while True:
@@ -545,6 +554,10 @@ def write_package(b, fs, out_path, skip_levels=False):
                         if not chunk:
                             break
                         dst.write(chunk)
+    import zipcheck
+    bad = zipcheck.problems(tmp)
+    if bad:
+        raise BuildError("%s cannot be read by the game: %s" % (out_path, "; ".join(bad[:5])))
     os.replace(tmp, out_path)
 
 

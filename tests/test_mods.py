@@ -359,6 +359,9 @@ class StgPackageTest(unittest.TestCase):
             def open(self, path):
                 return io.BytesIO(body)
 
+            def size(self, path):
+                return len(body)
+
         patched, recs, n = build_mods.unlock_stg_head(body[:build_mods.STG_HEAD])
         self.assertEqual(n, 1)
         b = build_mods.Built("unlocked_trucks", {"title": "Unlocked Trucks"})
@@ -371,6 +374,9 @@ class StgPackageTest(unittest.TestCase):
         self.assertEqual(len(data), len(body))
         diff = [i for i in range(len(body)) if body[i] != data[i]]
         self.assertEqual(diff, [recs[0]["locked_at"]])
+        # the cause of the 1.0.0 in-game failure: Zip64 local headers that PhysFS 2.0 rejects
+        import zipcheck
+        self.assertEqual(zipcheck.problems(out), [])
 
 
 def _tags(tops):
