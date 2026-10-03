@@ -1,0 +1,9 @@
+.venv/
+.ci-venv/
+build/
+workshop/
+release/
+__pycache__/
+*.pyc
+.hypothesis/
+*.part
