@@ -20,12 +20,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # (file, old text, new text, test module pattern, test name filter)
 MUTATIONS = [
-    ("mods/no_damage/mod.json", '"set": "1000000"', '"set": "1000"', "test_mods.py",
+    ("mods/no_damage/mod.json", '"set": "64000"', '"set": "1000"', "test_mods.py",
      "test_each_mod_alone_patches_every_target"),
-    ("mods/infinite_fuel/mod.json", '"set": "100000"', '"set": "0"', "test_mods.py", "test_no_zero_divisors"),
+    ("mods/infinite_fuel/mod.json", '"set": "64000"', '"set": "0"', "test_mods.py", "test_no_zero_divisors"),
     ("mods/powerful_engines/mod.json", '"scale": 2.5', '"scale": 2.0', "test_mods.py",
      "test_each_mod_alone_patches_every_target"),
-    ("mods/order.json", '"hyper_power": ["powerful_engines"]', '"hyper_power": []', "test_mods.py",
+    ("mods/order.json", '"hyper_power": [\n      "powerful_engines"\n    ]', '"hyper_power": []', "test_mods.py",
      "test_hyper_power_is_not_stacked"),
     ("mods/awd_difflock/mod.json", '"none": "full",\n        "": "full"', '"none": "full"', "test_mods.py",
      "test_each_mod_alone_patches_every_target"),
@@ -65,6 +65,11 @@ MUTATIONS = [
      "test_stream_copy"),
     ("tools/install_local.py", "skip = [] if include_opt_in else opt_in()", "skip = []", "test_install.py",
      "test_default_is_the_safe_set_and_says_so"),
+    ("mods/infinite_fuel/mod.json", '"set": "64000"', '"set": "100000"', "test_limits.py",
+     "test_every_mod_value_within_limits"),
+    ("mods/hyper_power/mod.json", ',\n      "max": 1000000', "", "test_limits.py", "test_every_mod_value_within_limits"),
+    ("tools/engine_limits.py", '("Damage", "Capacity"): (None, 64000),', '("Damage", "Capacity"): (None, 6400000),',
+     "test_limits.py", "test_limits_match_the_exe"),
 ]
 
 

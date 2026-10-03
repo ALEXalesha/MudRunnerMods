@@ -16,6 +16,7 @@
     ]
   },
   "opt_in": [
+    "hyper_power",
     "unlocked_trucks"
   ]
 }

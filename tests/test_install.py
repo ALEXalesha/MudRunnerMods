@@ -74,9 +74,10 @@ class ConfigEditTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertEqual(backup, CONFIG)
         self.assertNotIn("Unlocked_Trucks", text)
-        self.assertEqual(text.count("OpenTrail_"), 8)
-        self.assertIn("Installing 8 mods", r.stdout)
-        self.assertIn("Not installed: unlocked_trucks", r.stdout)
+        self.assertNotIn("Hyper_Power", text)          # alternative to Powerful Engines, opt-in
+        self.assertEqual(text.count("OpenTrail_"), 7)
+        self.assertIn("Installing 7 mods", r.stdout)
+        self.assertIn("Not installed: hyper_power, unlocked_trucks", r.stdout)
 
     def test_all_and_explicit(self):
         r, text, _b = self.run_tool("--all", "--apply")
@@ -94,7 +95,7 @@ class ConfigEditTest(unittest.TestCase):
         self.assertIsNone(backup)
 
     def test_opt_in_lists_unlocked_trucks(self):
-        self.assertEqual(install_local.opt_in(), ["unlocked_trucks"])
+        self.assertEqual(install_local.opt_in(), ["hyper_power", "unlocked_trucks"])
 
 if __name__ == "__main__":
     unittest.main()
