@@ -34,6 +34,17 @@ Ops in mod.json ("ops": [...]):
 "only": "drivable" = <Truck> classes with gears; "trailers" = <Truck> without
 gears; "all" = every class of the kind.
 
+Truck mods are heirs (since the third in-game test)
+---------------------------------------------------
+Replacing a stock classes/trucks/*.xml crashed the game on "Single player" even
+when only FuelCapacity changed (wheel and plant replacements worked). The truck
+mods ("as_heirs": true in mod.json) therefore never replace a stock truck file:
+their package holds NEW classes that inherit the stock trucks
+(<_parent File="kamaz4310" />, file otf_kamaz4310.xml) with the changed values,
+the way Workshop items work. The stock trucks on the maps stay stock; the new
+trucks are picked in the truck slots at map start or spawned in the Proving
+Ground. `--only` with several truck mods builds combined heirs (otc_*).
+
 Load order and shared files
 ---------------------------
 mods/order.json lists the mods from the top of the Config.xml MediaPath list
@@ -445,6 +456,7 @@ class Built(object):
         self.spec = spec
         self.files = {}         # archive path -> bytes (class files)
         self.file_mods = {}     # archive path -> [mod names in this file, top first]
+        self.heir_parents = {}  # archive path of a new truck class -> stock class it inherits
         self.levels = {}        # archive path -> (patched head, records, unlocked)
         self.log = []
         self.zip_path = None
@@ -464,11 +476,16 @@ def build_all(game_dir, out_dir=None, only=None, skip_levels=False, verbose=True
     for name in order:
         plans[name] = plan_mod(load_spec(name), fs, stock)
 
+    heirs = {n for n in order if is_heir_mod(n)}
+
     def run(chain_names):
         """Apply mods bottom-first. Returns Patcher and the touched set per mod."""
         p = Patcher(fs)
         touched = {}
         for n in chain_names:
+            if n in heirs:
+                touched[n] = set()
+                continue
             desires, sockets, _levels = plans[n]
             t = p.apply(desires, n)
             t |= p.add_winch_sockets(sockets, n)
@@ -481,6 +498,8 @@ def build_all(game_dir, out_dir=None, only=None, skip_levels=False, verbose=True
             if n not in order:
                 raise BuildError("unknown mod %s" % n)
         names = [n for n in reversed(order) if n in only]
+        if "hyper_power" in names and "powerful_engines" in names:
+            raise BuildError("hyper_power and powerful_engines are alternatives: pick one")
         p, touched = run(names)
         b = Built("custom", {"id": "custom", "title": "Custom", "version": load_spec(names[0])["version"]})
         files = set().union(*touched.values())
@@ -488,6 +507,14 @@ def build_all(game_dir, out_dir=None, only=None, skip_levels=False, verbose=True
             b.files[path] = p.overlay[path]
             b.file_mods[path] = [n for n in reversed(names) if path in touched[n]]
         b.log = p.log
+        chosen_heirs = [n for n in names if n in heirs]
+        if chosen_heirs:
+            combo = {"id": "custom", "workshop_prefix": "otc", "ops": []}
+            for n in chosen_heirs:
+                combo["ops"].extend(load_spec(n)["ops"])
+            hf, hp = heir_package(combo, fs, stock)
+            b.files.update(hf)
+            b.heir_parents.update(hp)
         bad = limit_violations(fs, b.files)
         if bad:
             raise BuildError("custom: value outside the game's limits: %s" % (bad[0],))
@@ -500,13 +527,19 @@ def build_all(game_dir, out_dir=None, only=None, skip_levels=False, verbose=True
 
     for i, name in enumerate(order):
         spec = load_spec(name)
-        lower = [n for n in reversed(order[i + 1:]) if n not in replaces.get(name, [])]
-        p, touched = run(lower + [name])
+        lower = [n for n in reversed(order[i + 1:]) if n not in replaces.get(name, []) and n not in heirs]
         b = Built(name, spec)
-        for path in sorted(touched[name]):
-            b.files[path] = p.overlay[path]
-            b.file_mods[path] = [n for n in reversed(lower + [name]) if path in touched[n]]
-        b.log = [x for x in p.log if x[0] in touched[name]]
+        if name in heirs:
+            b.files, b.heir_parents = heir_package(spec, fs, stock)
+        else:
+            p, touched = run(lower + [name])
+            for path in sorted(touched[name]):
+                b.files[path] = p.overlay[path]
+                b.file_mods[path] = [n for n in reversed(lower + [name]) if path in touched[n]]
+            b.log = [x for x in p.log if x[0] in touched[name]]
+        if stock_truck_replacements(fs, b.files):
+            raise BuildError("%s replaces stock truck files (crashes the game): %s"
+                             % (name, stock_truck_replacements(fs, b.files)[:3]))
         _levels(b, fs, plans[name][2], skip_levels)
         if not b.files and not plans[name][2]:
             raise BuildError("%s changes nothing" % name)
@@ -519,19 +552,45 @@ def build_all(game_dir, out_dir=None, only=None, skip_levels=False, verbose=True
             b.zip_path = os.path.join(out_dir, zip_name(spec))
             write_package(b, fs, b.zip_path, skip_levels)
         if verbose:
-            print("== %s: %d class files, %d levels%s" % (spec["title"], len(b.files), len(b.levels),
+            print("== %s: %d class files%s, %d levels%s" % (spec["title"], len(b.files),
+                                                            " (new heir trucks)" if b.heir_parents else "", len(b.levels),
                                                           (" -> " + b.zip_path) if b.zip_path else ""))
             summarize(b)
     return result
 
 
+def is_heir_mod(name):
+    return bool(load_spec(name).get("as_heirs"))
+
+
+def heir_package(spec, fs, stock):
+    """{path: bytes} of inherited trucks for one heir mod (base game and DLC, local use)."""
+    import build_workshop
+    variants = build_workshop.plan_variants(spec["id"], spec, fs, stock, include_dlc=True)
+    build_workshop.verify_variants(spec["id"], spec, variants, fs, stock)
+    files, parents = {}, {}
+    for (kind, new), (xml, parent) in sorted(variants.items()):
+        path = mrxml.KIND_DIRS[kind] + new + ".xml"
+        files[path] = xml.encode("utf-8")
+        parents[path] = parent
+    return files, parents
+
+
+def stock_truck_replacements(fs, files):
+    """Paths in a package that replace a stock truck class file (the crash cause)."""
+    return sorted(p for p in files if p.startswith(mrxml.KIND_DIRS["trucks"]) and fs.exists(p))
+
+
 def limit_violations(fs, files):
     """Effective values outside the exe's limits, for every truck and wheel class
-    over the package `files`: [(kind, class, tag, attr, value, (lo, hi))]."""
+    over the package `files` (stock classes and new ones): [(kind, class, tag, attr, value, (lo, hi))]."""
     r = mrxml.Resolver(mrxml.Layer(fs, files))
     out = []
     for kind in ("trucks", "wheels"):
-        for n in fs.class_names(kind):
+        names = set(fs.class_names(kind))
+        d = mrxml.KIND_DIRS[kind]
+        names |= {p[len(d):-4] for p in files if p.startswith(d) and p.endswith(".xml")}
+        for n in sorted(names):
             root, _chain = r.resolve(kind, n)
             stack = [root]
             while stack:

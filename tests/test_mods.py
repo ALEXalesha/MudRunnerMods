@@ -76,9 +76,15 @@ def check_mod_effect(test, mod, files):
     r = resolver_with(files)
     st = stock()
     if mod in TRUCK_MODS:
+        # truck mods ship new heir classes (<prefix>_<truck>); trucks a mod does not
+        # need to change (AWD on trucks that already have it) have no heir
+        prefix = build_mods.load_spec(mod)["workshop_prefix"]
         trucks = drivable_trucks()
         for n in trucks:
-            check_truck(test, mod, n, st.resolve("trucks", n)[0], r.resolve("trucks", n)[0])
+            heir = "%s_%s" % (prefix, n)
+            got = r.resolve("trucks", heir)[0] if mrxml.KIND_DIRS["trucks"] + heir + ".xml" in files \
+                else st.resolve("trucks", n)[0]
+            check_truck(test, mod, n, st.resolve("trucks", n)[0], got)
         return len(trucks)
     if mod == "grippy_wheels":
         wheels = fs().class_names("wheels")
@@ -149,89 +155,97 @@ class BuiltModsTest(unittest.TestCase):
             self.assertEqual(counts[m], 36, m)
         self.assertEqual(counts["grippy_wheels"], 50)
 
-    def test_dlc_files_are_in_the_packages(self):
+    def test_no_package_replaces_a_stock_truck_file(self):
+        """The cause of the third in-game crash ("Single player", Esc): replacing a stock
+        classes/trucks/*.xml, even with only FuelCapacity changed. Wheel and plant
+        replacements worked. Truck mods ship heir classes instead."""
+        for name, b in built().items():
+            self.assertEqual(build_mods.stock_truck_replacements(fs(), b.files), [], name)
+        custom = build_mods.build_all(common.GAME, None, only=["infinite_fuel", "grippy_wheels"],
+                                      skip_levels=True, verbose=False, fs=fs())["custom"]
+        self.assertEqual(build_mods.stock_truck_replacements(fs(), custom.files), [])
+
+    def test_heirs_inherit_stock_trucks(self):
+        for m in TRUCK_MODS:
+            b = built()[m]
+            prefix = build_mods.load_spec(m)["workshop_prefix"]
+            self.assertTrue(b.heir_parents, m)
+            for path, parent in b.heir_parents.items():
+                tops = mrxml.parse(b.files[path])
+                self.assertEqual(mrxml.parent_name(tops), parent)
+                self.assertTrue(path.endswith("/%s_%s.xml" % (prefix, parent)), path)
+                self.assertTrue(fs().exists("classes/trucks/%s.xml" % parent))
+
+    def test_dlc_trucks_have_heirs(self):
         dlc_trucks = {n for n in drivable_trucks() if source("trucks", n) != "Media.zip"}
         self.assertEqual(len(dlc_trucks), 16)
         for m in TRUCK_MODS:
-            sources = {fs().source(p) for p in built()[m].files}
-            # AWD: the Valley DLC trucks already have AWD and a diff lock, nothing to change
-            for d in DLC if m != "awd_difflock" else ["_dlc_usa.zip", "_dlc_ridge.zip", "_dlc_oldtimers.zip"]:
-                self.assertIn(d, sources, m)
+            parents = set(built()[m].heir_parents.values())
+            if m == "awd_difflock":
+                self.assertTrue(parents & dlc_trucks)
+            else:
+                self.assertEqual(dlc_trucks - parents, set(), m)
         wsrc = {fs().source(p) for p in built()["grippy_wheels"].files}
         for d in ("_dlc_valley.zip", "_dlc_ridge.zip", "_dlc_usa.zip"):
             self.assertIn(d, wsrc)
 
     def test_all_mods_in_order(self):
-        """All packages mounted in the recommended order (first copy wins): every mod
-        keeps its effect, Hyper Power replaces Powerful Engines."""
+        """All packages mounted together: every mod keeps its effect."""
         order = build_mods.load_order()
         overlay = {}
         for n in order:
             for p, data in built()[n].files.items():
                 overlay.setdefault(p, data)
         for n in order:
-            if n == "powerful_engines":
-                continue
             check_mod_effect(self, n, overlay)
 
-    def test_chain_upper_carries_lower(self):
-        """A shared file in an upper mod carries the changes of every lower mod in that
-        file (except mods it replaces), so the upper package alone keeps them."""
-        order = build_mods.load_order()
-        replaces = build_mods.load_replaces()
-        res = built()
-        st = stock()
-        pairs = 0
-        for i, upper in enumerate(order):
-            for lower in order[i + 1:]:
-                if lower in replaces.get(upper, []) or lower not in TRUCK_MODS:
-                    continue
-                shared = set(res[upper].files) & set(res[lower].files)
-                if not shared:
-                    continue
-                r = resolver_with(res[upper].files)
-                for n in drivable_trucks():
-                    chain = st.raw("trucks", n)[2]
-                    touched = [c for c in chain if c in res[lower].files]
-                    if touched and all(c in res[upper].files for c in touched):
-                        check_truck(self, lower, n, st.resolve("trucks", n)[0], r.resolve("trucks", n)[0])
-                        pairs += 1
-                for p in shared:
-                    self.assertIn(lower, res[upper].file_mods[p], p)
-        self.assertGreater(pairs, 100)
+    def test_no_two_packages_ship_the_same_path(self):
+        """Heir trucks have per-mod prefixes, so the packages never shadow each other."""
+        seen = {}
+        for name, b in built().items():
+            for p in b.files:
+                self.assertNotIn(p, seen, "%s and %s" % (seen.get(p), name))
+                seen[p] = name
 
     def test_hyper_power_is_not_stacked(self):
         hp = built()["hyper_power"]
-        self.assertFalse(any("powerful_engines" in m for m in hp.file_mods.values()))
         r = resolver_with(hp.files)
         for n in drivable_trucks():
             so = float(stock().resolve("trucks", n)[0].find("TruckData/Motor")[0].get("Torque"))
-            self.assertAlmostEqual(float(r.resolve("trucks", n)[0].find("TruckData/Motor")[0].get("Torque")),
-                                   min(so * 10, 1000000.0), delta=1.0, msg=n)
+            got = r.resolve("trucks", "oth_" + n)[0].find("TruckData/Motor")[0].get("Torque")
+            self.assertAlmostEqual(float(got), min(so * 10, 1000000.0), delta=1.0, msg=n)
 
     def test_custom_package_has_exactly_the_chosen_mods(self):
         b = build_mods.build_all(common.GAME, None, only=["infinite_fuel", "no_damage"], skip_levels=True,
                                  verbose=False, fs=fs())["custom"]
-        check_mod_effect(self, "infinite_fuel", b.files)
-        check_mod_effect(self, "no_damage", b.files)
         r = resolver_with(b.files)
         for n in drivable_trucks():
             s = stock().resolve("trucks", n)[0]
-            p = r.resolve("trucks", n)[0]
+            p = r.resolve("trucks", "otc_" + n)[0]
+            check_truck(self, "infinite_fuel", n, s, p)
+            check_truck(self, "no_damage", n, s, p)
             self.assertEqual(s.find("TruckData/Motor")[0].get("Torque"), p.find("TruckData/Motor")[0].get("Torque"))
             self.assertEqual(s.find("TruckData/Damage")[0].get("SensationMin"),
                              p.find("TruckData/Damage")[0].get("SensationMin"))
+        with self.assertRaises(build_mods.BuildError):
+            build_mods.build_all(common.GAME, None, only=["hyper_power", "powerful_engines"], skip_levels=True,
+                                 verbose=False, fs=fs())
 
     def test_outputs_stay_valid_xml(self):
-        """Every patched file parses; where the stock file is well-formed XML (one
-        wrapper root added), the patched one is too; the element structure is the
-        stock one (plants may gain GameData/WinchSocket)."""
+        """Every shipped file parses. Replaced stock files (wheels, plants): where the
+        stock file is well-formed XML (one wrapper root added) the patched one is too,
+        and the element structure is the stock one (plants may gain GameData/WinchSocket).
+        Heir files are plain XML."""
         n = 0
         for name, b in built().items():
             for path, data in b.files.items():
-                old = mrxml.decode(fs().read(path))
                 new = mrxml.decode(data)
                 tops = mrxml.parse(new)
+                if path in b.heir_parents:
+                    ET.fromstring("<R>" + new + "</R>")
+                    n += 1
+                    continue
+                old = mrxml.decode(fs().read(path))
                 try:
                     ET.fromstring("<R>" + old + "</R>")
                     stock_ok = True
@@ -249,10 +263,11 @@ class BuiltModsTest(unittest.TestCase):
         self.assertGreater(n, 200)
 
     def test_only_targeted_attributes_change(self):
-        allowed = {"Torque", "FuelCapacity", "Capacity", "DiffLockType", "SensationMin", "SensationMax",
-                   "SubstanceFriction", "BodyFriction", "Pos", "ParentFrame"}
+        allowed = {"SubstanceFriction", "BodyFriction", "Pos", "ParentFrame"}
         for name, b in built().items():
             for path, data in b.files.items():
+                if path in b.heir_parents:
+                    continue                     # checked attribute by attribute by verify_variants
                 o = _attrs(mrxml.parse(fs().read(path)))
                 p = _attrs(mrxml.parse(data))
                 for k in set(o) | set(p):
@@ -268,7 +283,9 @@ class BuiltModsTest(unittest.TestCase):
         for name, b in built().items():
             r = resolver_with(b.files)
             for kind in ("trucks", "wheels"):
-                for cls in fs().class_names(kind):
+                d = mrxml.KIND_DIRS[kind]
+                names = set(fs().class_names(kind)) | {p[len(d):-4] for p in b.files if p.startswith(d)}
+                for cls in sorted(names):
                     root = r.resolve(kind, cls)[0]
                     for node in _walk(root):
                         for k, v in node.attrs.items():
@@ -282,16 +299,20 @@ class BuiltModsTest(unittest.TestCase):
 
     def test_no_value_is_set_to_zero_by_a_mod(self):
         for name, b in built().items():
-            for path, attr, old, new, owner in b.log:
-                if attr in ("WinchSocket",):
-                    continue
+            values = [x[3] for x in b.log if x[1] != "WinchSocket"]
+            for path in b.heir_parents:
+                values += [a.value for a in _all_attrs(mrxml.parse(b.files[path]))
+                           if a.name not in ("File", "Torque", "DiffLockType", "Type")]
+            for new in values:
                 if str(new).startswith("("):
                     continue           # vectors may hold 0 components
                 for num in _numbers(new):
-                    self.assertNotEqual(num, 0.0, "%s %s %s" % (name, path, attr))
+                    self.assertNotEqual(num, 0.0, "%s %s" % (name, new))
 
     def test_every_patch_is_logged_and_lands(self):
         for name, b in built().items():
+            if b.heir_parents:
+                continue
             own = [x for x in b.log if x[4] == name]
             self.assertTrue(own or b.levels or name == "unlocked_trucks", name)
             for path, attr, old, new, owner in own:

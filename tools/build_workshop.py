@@ -135,7 +135,7 @@ def base_game(fs, kind, name):
     return fs.source(mrxml.KIND_DIRS[kind] + name + ".xml") == "Media.zip"
 
 
-def plan_variants(name, spec, fs, stock):
+def plan_variants(name, spec, fs, stock, include_dlc=False):
     """{(kind, new name): (xml text, parent name, display suffix)} for one mod."""
     prefix = spec["workshop_prefix"]
     desires, sockets, levels = build_mods.plan_mod(spec, fs, stock)
@@ -144,7 +144,7 @@ def plan_variants(name, spec, fs, stock):
     out = {}
     wheel_map = {}
     for (kind, cls), wants in sorted(desires.items()):
-        if not base_game(fs, kind, cls):
+        if not include_dlc and not base_game(fs, kind, cls):
             continue
         root, _chain = stock.resolve(kind, cls)
         changes = [(raw_steps(root, pos), attr, value) for pos, attr, value in wants]
@@ -155,7 +155,7 @@ def plan_variants(name, spec, fs, stock):
     if wheel_map:
         # trucks that use the new wheels: every wheel of every base-game drivable truck
         for cls in fs.class_names("trucks"):
-            if not base_game(fs, "trucks", cls):
+            if not include_dlc and not base_game(fs, "trucks", cls):
                 continue
             root, _chain = stock.resolve("trucks", cls)
             if not build_mods.is_drivable(root):
@@ -391,7 +391,7 @@ def release_assets(folders, local_dir, out_dir):
     os.makedirs(out_dir, exist_ok=True)
     assets = []
     for f in sorted(os.listdir(local_dir)):
-        if f.startswith(FAMILY + "_") and f.endswith(".zip"):
+        if f.startswith(FAMILY + "_") and f.endswith(".zip") and "_Probe_" not in f:
             dst = os.path.join(out_dir, f)
             shutil.copyfile(os.path.join(local_dir, f), dst)
             assets.append(dst)

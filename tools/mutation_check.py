@@ -7,6 +7,9 @@ Each mutation runs in a fresh temp copy of the repository (tracked and new,
 not ignored files), so the working tree is never touched. A mutation is
 "caught" when the listed test fails on the mutated copy. A green suite that
 does not catch these means nothing.
+
+(The old chain mutation is gone: since the truck mods ship heir classes, no two
+packages share a path, so breaking the chain changes no output.)
 """
 
 import os
@@ -25,8 +28,8 @@ MUTATIONS = [
     ("mods/infinite_fuel/mod.json", '"set": "64000"', '"set": "0"', "test_mods.py", "test_no_zero_divisors"),
     ("mods/powerful_engines/mod.json", '"scale": 2.5', '"scale": 2.0', "test_mods.py",
      "test_each_mod_alone_patches_every_target"),
-    ("mods/order.json", '"hyper_power": [\n      "powerful_engines"\n    ]', '"hyper_power": []', "test_mods.py",
-     "test_hyper_power_is_not_stacked"),
+    ("tools/build_mods.py", 'if "hyper_power" in names and "powerful_engines" in names:', "if False:",
+     "test_mods.py", "test_custom_package_has_exactly_the_chosen_mods"),
     ("mods/awd_difflock/mod.json", '"none": "full",\n        "": "full"', '"none": "full"', "test_mods.py",
      "test_each_mod_alone_patches_every_target"),
     ("mods/awd_difflock/mod.json", '"None": "Default"', '"Always": "Always"', "test_mods.py",
@@ -37,8 +40,6 @@ MUTATIONS = [
      "test_each_mod_alone_patches_every_target"),
     ("mods/strong_winch/mod.json", '"stump_b"', '"stump_a"', "test_mods.py",
      "test_each_mod_alone_patches_every_target"),
-    ("tools/build_mods.py", "if n not in replaces.get(name, [])]", "if False]",
-     "test_mods.py", "test_chain_upper_carries_lower"),
     ("tools/build_mods.py", 'buf[r["locked_at"]] = 0', 'buf[r["locked_at"] + 1] = 0', "test_mods.py",
      "test_unlock_changes_only_lock_bytes"),
     ("tools/build_mods.py", "        if n:                      # levels without", "        if True:  # levels without",
@@ -70,6 +71,12 @@ MUTATIONS = [
     ("mods/hyper_power/mod.json", ',\n      "max": 1000000', "", "test_limits.py", "test_every_mod_value_within_limits"),
     ("tools/engine_limits.py", '("Damage", "Capacity"): (None, 64000),', '("Damage", "Capacity"): (None, 6400000),',
      "test_limits.py", "test_limits_match_the_exe"),
+    # third in-game test: replacing a stock truck file crashed "Single player"
+    ("mods/infinite_fuel/mod.json", '"as_heirs": true', '"as_heirs": false', "test_mods.py",
+     "test_no_package_replaces_a_stock_truck_file"),
+    ("tools/build_workshop.py", """    for (kind, cls), wants in sorted(desires.items()):
+        if not include_dlc and not base_game(fs, kind, cls):""", """    for (kind, cls), wants in sorted(desires.items()):
+        if not base_game(fs, kind, cls):""", "test_mods.py", "test_dlc_trucks_have_heirs"),
 ]
 
 
