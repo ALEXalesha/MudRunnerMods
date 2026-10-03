@@ -41,6 +41,10 @@ stock files in `Media.zip` and the DLC archives.
 - Logs: the exe still names `Log.txt`, but the current build did not write it in
   any run since January 2026 (with or without mods). Crashes go to
   `SteamAPI_WriteMiniDump`; no MudRunner dump in `Steam\dumps`.
+- Caches: `_m/<mesh>` and `_t/<texture>` entries, keyed by mesh/texture name;
+  fallbacks `MeshCache/`, `TextureCache/` and the sources `meshes/`, `textures/`
+  ("Texture %s out of date", "Out of date cache %s updated"). Class XML is not
+  cached.
 - Value limits: some attributes are read through range-checked getters that clamp
   and report via the XML error logger: FuelCapacity and Damage/Capacity at most
   64000, Motor Torque at most 1000000, wheel frictions 0.1 to 10.0

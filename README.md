@@ -108,6 +108,12 @@ With the safe set the main menu opened, but the game crashed on "Single player",
 
 `tools/engine_limits.py` holds the table and reads the same numbers back from the installed exe; the build stops on any value outside it, and the tests check every truck and wheel of every package, all packages together and the Workshop variants.
 
+### Probe package and the caches
+
+`tools/build_probe.py` writes `OpenTrail_Probe_Identical.zip`: three stock files (a truck, a wheel, a plant) copied byte for byte, in the same zip format. `install_local.py --probe --apply` mounts only that. If the game works with it, the mount mechanism is fine.
+
+The texture and mesh caches (`TextureCache.zip` as `_t/`, `MeshCache.zip` as `_m/`) are keyed by mesh and texture names (`_m/trucks_kamaz4310`); the exe falls back to `MeshCache/` and the source `meshes/` / `textures/` folders. Class XML files are not part of any cache, and the packages ship no mesh or texture, so a changed truck XML cannot make a cache entry stale. Workshop items ship their own `_m/` and `_t/` entries only because they bring new meshes.
+
 ## Load order and shared files
 
 Top to bottom (`mods/order.json`), the same order as the MediaPath lines:
@@ -182,6 +188,7 @@ A mod in `mods/<name>/mod.json` states the effective value every target must hav
 | `tools/install_local.py` | Config.xml lines (safe set by default) |
 | `tools/zipcheck.py` | Can the game's PhysFS 2.0 read a zip |
 | `tools/engine_limits.py` | Value limits the exe enforces |
+| `tools/build_probe.py` | Byte-identical probe package |
 | `tools/mutation_check.py` | Mutation check |
 | `tools/publish_github.sh` | Copy to GitHub without personal data (run only after the in-game test) |
 | `docs/research.md` | How MudRunner mods work, with sources |
