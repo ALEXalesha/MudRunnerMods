@@ -135,42 +135,72 @@ def base_game(fs, kind, name):
     return fs.source(mrxml.KIND_DIRS[kind] + name + ".xml") == "Media.zip"
 
 
+def make_copies(desires, prefix, fs):
+    """Standalone copies of stock classes under new names, with the wanted values.
+
+    desires: {(kind, cls): [(pos, attr, value)]}. Each copy is the stock class
+    RESOLVED (inheritance and templates applied) and written out in full, with no
+    <_parent> and no _template: the format of every Workshop truck on this PC (the
+    Editor flattens on publish; only load addons keep a <_parent>). Thin heirs
+    (<_parent File="kamaz4310"/> + one value) are not used for trucks.
+    Returns {(kind, new): (xml text, cls)}."""
+    stock = mrxml.Resolver(fs)
+    out = {}
+    for (kind, cls), wants in sorted(desires.items()):
+        new = "%s_%s" % (prefix, cls)
+        if not NAME_RE.match(new):
+            raise WorkshopError("bad file name %s" % new)
+        root = mrxml.copy_tree(stock.resolve(kind, cls)[0])
+        for pos, attr, value in wants:
+            node = build_mods.node_at(root, pos)
+            if node is None:
+                raise WorkshopError("%s %s: no element at %s" % (kind, cls, pos))
+            node.attrs[attr] = value
+        out[(kind, new)] = (mrxml.serialize(root), cls)
+    return out
+
+
 def plan_variants(name, spec, fs, stock, include_dlc=False):
-    """{(kind, new name): (xml text, parent name, display suffix)} for one mod."""
+    """{(kind, new name): (xml text, stock class)} for one mod: full copies."""
     prefix = spec["workshop_prefix"]
     desires, sockets, levels = build_mods.plan_mod(spec, fs, stock)
     if sockets or levels:
         raise WorkshopError("%s has no Workshop version" % name)
-    out = {}
-    wheel_map = {}
-    for (kind, cls), wants in sorted(desires.items()):
-        if not include_dlc and not base_game(fs, kind, cls):
-            continue
-        root, _chain = stock.resolve(kind, cls)
-        changes = [(raw_steps(root, pos), attr, value) for pos, attr, value in wants]
-        new = "%s_%s" % (prefix, cls)
-        out[(kind, new)] = (child_xml(cls, root.tag, changes), cls)
-        if kind == "wheels":
-            wheel_map[cls] = new
+    picked = {k: v for k, v in desires.items() if include_dlc or base_game(fs, k[0], k[1])}
+    out = make_copies(picked, prefix, fs)
+    wheel_map = {cls: new for (kind, new), (_x, cls) in out.items() if kind == "wheels"}
     if wheel_map:
-        # trucks that use the new wheels: every wheel of every base-game drivable truck
+        # trucks that use the new wheels: every wheel of every drivable truck
+        truck_desires = {}
         for cls in fs.class_names("trucks"):
             if not include_dlc and not base_game(fs, "trucks", cls):
                 continue
             root, _chain = stock.resolve("trucks", cls)
             if not build_mods.is_drivable(root):
                 continue
-            changes = []
+            wants = []
             for pos, node in build_mods.iter_path(root, "Wheels/Wheel"):
                 t = node.get("Type")
                 if t not in wheel_map:
                     raise WorkshopError("%s wheel type %s has no grippy variant" % (cls, t))
-                changes.append((raw_steps(root, pos), "Type", wheel_map[t]))
-            new = "%s_%s" % (prefix, cls)
-            out[("trucks", new)] = (child_xml(cls, root.tag, changes), cls)
-    for (_kind, new) in out:
-        if not NAME_RE.match(new):
-            raise WorkshopError("bad Workshop file name %s" % new)
+                wants.append((pos, "Type", wheel_map[t]))
+            truck_desires[("trucks", cls)] = wants
+        out.update(make_copies(truck_desires, prefix, fs))
+    return out
+
+
+def billboard_copies(variants, fs):
+    """{path: bytes}: the truck-selection icon billboards/trucks/<truck>.dds for every
+    new truck, copied from its stock truck (every drivable stock truck has one; the
+    truck selection screen loads it by the truck's file name)."""
+    out = {}
+    for (kind, new), (_xml, cls) in variants.items():
+        if kind != "trucks":
+            continue
+        src = "billboards/trucks/%s.dds" % cls
+        if not fs.exists(src):
+            raise WorkshopError("no %s for the new truck %s" % (src, new))
+        out["billboards/trucks/%s.dds" % new] = fs.read(src)
     return out
 
 
@@ -197,7 +227,7 @@ def verify_variants(name, spec, variants, fs, stock):
 
 
 def _compare(got, want, pos, expected, where):
-    keys = set(got.attrs) | set(want.attrs)
+    keys = (set(got.attrs) | set(want.attrs)) - set(mrxml.CONTROL_ATTRS)   # merge directives only
     for k in keys:
         if (pos, k) in expected:
             if got.attrs.get(k) != expected[(pos, k)]:
@@ -367,6 +397,11 @@ def build(out_dir, game=build_mods.DEFAULT_GAME, verbose=True):
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             with open(dst, "w", encoding="utf-8", newline="\n") as fh:
                 fh.write(xml)
+        for path, data in billboard_copies(variants, fs).items():
+            dst = os.path.join(mod, *path.split("/"))
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            with open(dst, "wb") as fh:
+                fh.write(data)
         with open(os.path.join(mod, "strings.xml"), "w", encoding="utf-8", newline="\n") as fh:
             fh.write(strings_xml(variants, names, spec["workshop_suffix"], stock))
         draw_preview(spec, os.path.join(mod, "preview.png"))

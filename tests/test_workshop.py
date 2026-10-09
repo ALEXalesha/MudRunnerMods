@@ -50,8 +50,9 @@ class WorkshopTest(unittest.TestCase):
             mod = os.path.join(f, "mod")
             for dp, _dn, fn in os.walk(mod):
                 for x in fn:
-                    self.assertTrue(x.endswith((".xml", ".png")), x)
                     rel = os.path.relpath(os.path.join(dp, x), mod).replace("\\", "/")
+                    # .dds only as the truck-selection icon of a new truck
+                    self.assertTrue(x.endswith((".xml", ".png")) or rel.startswith("billboards/trucks/"), x)
                     if rel.startswith("classes/"):
                         stem = x[:-4]
                         self.assertRegex(stem, r"^[a-z0-9_]+$")
@@ -94,8 +95,9 @@ class WorkshopTest(unittest.TestCase):
         for f in folders():
             d = os.path.join(f, "mod", "classes", "trucks")
             for x in os.listdir(d):
-                parent = mrxml.parent_name(mrxml.parse(open(os.path.join(d, x), "rb").read()))
-                self.assertEqual(common.source("trucks", parent), "Media.zip", x)
+                self.assertIsNone(mrxml.parent_name(mrxml.parse(open(os.path.join(d, x), "rb").read())), x)
+                stock = x[:-4].split("_", 1)[1]           # <prefix>_<stock truck>.xml, a full copy
+                self.assertEqual(common.source("trucks", stock), "Media.zip", x)
             if "AWD" not in f:
                 self.assertEqual(len(os.listdir(d)), 20, f)
 

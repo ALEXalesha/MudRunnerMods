@@ -513,6 +513,33 @@ def raw_path(node_chain):
     return [(n.tag, n.raw_index) for n in node_chain]
 
 
+# --------------------------------------------------------------------------- flat files
+
+CONTROL_ATTRS = ("_template", "_noinherit", "_inheritRemove")
+
+
+def _esc(v):
+    return v.replace("&", "&amp;").replace('"', "&quot;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def serialize(node, depth=0):
+    """A resolved tree as one standalone element: no <_parent>, no templates, the way
+    the MudRunner Editor publishes Workshop items (every value written out)."""
+    ind = "\t" * depth
+    attrs = "".join(' %s="%s"' % (k, _esc(v)) for k, v in node.attrs.items() if k not in CONTROL_ATTRS)
+    if not node.children:
+        return "%s<%s%s />\n" % (ind, node.tag, attrs)
+    out = ["%s<%s%s>\n" % (ind, node.tag, attrs)]
+    for c in node.children:
+        out.append(serialize(c, depth + 1))
+    out.append("%s</%s>\n" % (ind, node.tag))
+    return "".join(out)
+
+
+def copy_tree(r):
+    return _copy(r)
+
+
 # --------------------------------------------------------------------------- values
 
 def fmt_num(value, like=None):

@@ -34,14 +34,15 @@ Ops in mod.json ("ops": [...]):
 "only": "drivable" = <Truck> classes with gears; "trailers" = <Truck> without
 gears; "all" = every class of the kind.
 
-Truck mods are heirs (since the third in-game test)
----------------------------------------------------
+Truck mods are new trucks (since the third in-game test)
+-------------------------------------------------------
 Replacing a stock classes/trucks/*.xml crashed the game on "Single player" even
 when only FuelCapacity changed (wheel and plant replacements worked). The truck
 mods ("as_heirs": true in mod.json) therefore never replace a stock truck file:
-their package holds NEW classes that inherit the stock trucks
-(<_parent File="kamaz4310" />, file otf_kamaz4310.xml) with the changed values,
-the way Workshop items work. The stock trucks on the maps stay stock; the new
+their package holds NEW classes: full copies of the stock truck files under new
+names (otf_kamaz4310.xml) with only the changed values, plus a copy of the
+selection icon billboards/trucks/<name>.dds. (Thin heirs with <_parent> and one
+value crashed at truck selection in the fourth test.) The stock trucks on the maps stay stock; the new
 trucks are picked in the truck slots at map start or spawned in the Proving
 Ground. `--only` with several truck mods builds combined heirs (otc_*).
 
@@ -552,7 +553,8 @@ def build_all(game_dir, out_dir=None, only=None, skip_levels=False, verbose=True
             b.zip_path = os.path.join(out_dir, zip_name(spec))
             write_package(b, fs, b.zip_path, skip_levels)
         if verbose:
-            print("== %s: %d class files%s, %d levels%s" % (spec["title"], len(b.files),
+            print("== %s: %d class files%s, %d levels%s" % (spec["title"],
+                                                            sum(1 for p in b.files if p.endswith(".xml")),
                                                             " (new heir trucks)" if b.heir_parents else "", len(b.levels),
                                                           (" -> " + b.zip_path) if b.zip_path else ""))
             summarize(b)
@@ -564,7 +566,8 @@ def is_heir_mod(name):
 
 
 def heir_package(spec, fs, stock):
-    """{path: bytes} of inherited trucks for one heir mod (base game and DLC, local use)."""
+    """{path: bytes} of new trucks for one heir mod (base game and DLC, local use): full
+    copies of the stock truck files under new names plus their selection icons."""
     import build_workshop
     variants = build_workshop.plan_variants(spec["id"], spec, fs, stock, include_dlc=True)
     build_workshop.verify_variants(spec["id"], spec, variants, fs, stock)
@@ -573,6 +576,7 @@ def heir_package(spec, fs, stock):
         path = mrxml.KIND_DIRS[kind] + new + ".xml"
         files[path] = xml.encode("utf-8")
         parents[path] = parent
+    files.update(build_workshop.billboard_copies(variants, fs))
     return files, parents
 
 

@@ -117,9 +117,11 @@ def main():
     ap.add_argument("--local", default=os.path.join(build_mods.ROOT, "build", "local"))
     ap.add_argument("--mods", help="comma separated mod names (default: the safe set)")
     ap.add_argument("--all", action="store_true", help="include the opt-in mods (Hyper Power, Unlocked Trucks)")
-    ap.add_argument("--probe", nargs="?", const="identical", choices=["identical", "changed"],
+    ap.add_argument("--probe", nargs="?", const="identical",
+                    choices=["identical", "changed", "manifest", "plant", "wheel", "truck"],
                     help="install only a probe (tools/build_probe.py): identical = 3 stock files byte for "
-                         "byte; changed = uaz469.xml with FuelCapacity 80 -> 81")
+                         "byte; changed = uaz469.xml with FuelCapacity 80 -> 81; manifest = only a ModStrings "
+                         "file, overrides nothing; plant / wheel / truck = one stock file byte for byte")
     ap.add_argument("--remove", action="store_true")
     ap.add_argument("--apply", action="store_true")
     a = ap.parse_args()
@@ -127,12 +129,14 @@ def main():
         raise SystemExit("Config.xml not found: %s (start the game once)" % a.config)
     mods = None
     if a.probe:
-        zname = "OpenTrail_Probe_Identical.zip" if a.probe == "identical" else "OpenTrail_Probe_Changed.zip"
+        zname = "OpenTrail_Probe_%s.zip" % a.probe.capitalize()
         probe = os.path.abspath(os.path.join(a.local, zname))
         if not os.path.isfile(probe):
             raise SystemExit("probe not built: run tools/build_probe.py first")
-        print("Installing the probe only (%s): %s" % (
-            "3 stock files, byte-identical" if a.probe == "identical" else "uaz469.xml, FuelCapacity 80 -> 81", probe))
+        what = {"identical": "3 stock files, byte-identical", "changed": "uaz469.xml, FuelCapacity 80 -> 81",
+                "manifest": "only a ModStrings file, overrides nothing", "plant": "stump_b.xml, byte-identical",
+                "wheel": "kamaz_offroad.xml, byte-identical", "truck": "uaz469.xml, byte-identical"}[a.probe]
+        print("Installing the probe only (%s): %s" % (what, probe))
         packages = [probe]
         mods = []
     elif not a.remove:

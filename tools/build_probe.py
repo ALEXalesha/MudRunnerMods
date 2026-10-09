@@ -42,6 +42,38 @@ def build(out_dir, game=build_mods.DEFAULT_GAME):
     return out
 
 
+# Sub-probes, each a separate zip and `install_local.py --probe <name>`:
+#   manifest  only a ModStrings file at the zip root, overrides nothing: is ANY extra mount a problem?
+#   plant     classes/plants/stump_b.xml, byte-identical
+#   wheel     classes/wheels/kamaz_offroad.xml, byte-identical
+#   truck     classes/trucks/uaz469.xml, byte-identical
+SUB_PROBES = {
+    "manifest": None,
+    "plant": "classes/plants/stump_b.xml",
+    "wheel": "classes/wheels/kamaz_offroad.xml",
+    "truck": "classes/trucks/uaz469.xml",
+}
+MANIFEST = b'<ModStrings>\n\t<String Id="opentrail_probe" Value="OpenTrail probe" />\n</ModStrings>\n'
+
+
+def sub_zip_name(name):
+    return "OpenTrail_Probe_%s.zip" % name.capitalize()
+
+
+def build_sub(name, out_dir, game=build_mods.DEFAULT_GAME):
+    fs = mrxml.GameFs(game)
+    os.makedirs(out_dir, exist_ok=True)
+    b = build_mods.Built("probe_" + name, {"title": "Probe " + name})
+    path = SUB_PROBES[name]
+    if path is None:
+        b.files["opentrail_probe.xml"] = MANIFEST
+    else:
+        b.files[path] = fs.read(path)
+    out = os.path.join(out_dir, sub_zip_name(name))
+    build_mods.write_package(b, fs, out)
+    return out
+
+
 def build_changed(out_dir, game=build_mods.DEFAULT_GAME):
     """One stock truck file with one value changed in place (80 -> 81 litres)."""
     fs = mrxml.GameFs(game)
@@ -61,3 +93,5 @@ if __name__ == "__main__":
     local = os.path.join(build_mods.ROOT, "build", "local")
     print(build(local))
     print(build_changed(local))
+    for n in SUB_PROBES:
+        print(build_sub(n, local))

@@ -61,7 +61,8 @@ class ConfigEditTest(unittest.TestCase):
             spec = install_local.build_mods.load_spec(name)
             open(os.path.join(local, install_local.build_mods.zip_name(spec)), "wb").close()
         open(os.path.join(local, "OpenTrail_Probe_Identical.zip"), "wb").close()
-        open(os.path.join(local, "OpenTrail_Probe_Changed.zip"), "wb").close()
+        for n in ("Changed", "Manifest", "Plant", "Wheel", "Truck"):
+            open(os.path.join(local, "OpenTrail_Probe_%s.zip" % n), "wb").close()
         env = dict(os.environ, OPENTRAIL_NO_GAME_CHECK="1")    # the game may be open on this PC
         r = subprocess.run([sys.executable, os.path.join(common.ROOT, "tools", "install_local.py"),
                             "--config", cfg, "--local", local] + list(args),
@@ -100,6 +101,11 @@ class ConfigEditTest(unittest.TestCase):
         self.assertEqual(r3.returncode, 0, r3.stdout + r3.stderr)
         self.assertIn("OpenTrail_Probe_Changed.zip", text3)
         self.assertEqual(text3.count("OpenTrail_"), 1)
+        for n in ("manifest", "plant", "wheel", "truck"):
+            r4, text4, _b = self.run_tool("--probe", n, "--apply")
+            self.assertEqual(r4.returncode, 0, r4.stdout + r4.stderr)
+            self.assertIn("OpenTrail_Probe_%s.zip" % n.capitalize(), text4)
+            self.assertEqual(text4.count("OpenTrail_"), 1)
         r2, text2, _b = self.run_tool("--remove", "--apply")
         self.assertEqual(r2.returncode, 0, r2.stdout + r2.stderr)
 

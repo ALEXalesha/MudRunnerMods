@@ -165,16 +165,23 @@ class BuiltModsTest(unittest.TestCase):
                                       skip_levels=True, verbose=False, fs=fs())["custom"]
         self.assertEqual(build_mods.stock_truck_replacements(fs(), custom.files), [])
 
-    def test_heirs_inherit_stock_trucks(self):
+    def test_new_trucks_are_full_copies_with_icons(self):
+        """Fourth in-game test: thin heirs (<_parent> + one value) crashed at truck
+        selection. New trucks are full standalone copies (no <_parent>, the Workshop
+        format) named <prefix>_<stock>, each with the stock selection icon."""
         for m in TRUCK_MODS:
             b = built()[m]
             prefix = build_mods.load_spec(m)["workshop_prefix"]
             self.assertTrue(b.heir_parents, m)
             for path, parent in b.heir_parents.items():
                 tops = mrxml.parse(b.files[path])
-                self.assertEqual(mrxml.parent_name(tops), parent)
+                self.assertIsNone(mrxml.parent_name(tops), path)
                 self.assertTrue(path.endswith("/%s_%s.xml" % (prefix, parent)), path)
                 self.assertTrue(fs().exists("classes/trucks/%s.xml" % parent))
+                if path.startswith("classes/trucks/"):
+                    new = path[len("classes/trucks/"):-4]
+                    icon = "billboards/trucks/%s.dds" % new
+                    self.assertEqual(b.files.get(icon), fs().read("billboards/trucks/%s.dds" % parent), icon)
 
     def test_dlc_trucks_have_heirs(self):
         dlc_trucks = {n for n in drivable_trucks() if source("trucks", n) != "Media.zip"}
@@ -239,6 +246,8 @@ class BuiltModsTest(unittest.TestCase):
         n = 0
         for name, b in built().items():
             for path, data in b.files.items():
+                if path.startswith("billboards/"):
+                    continue                     # selection icons: copied stock .dds bytes
                 new = mrxml.decode(data)
                 tops = mrxml.parse(new)
                 if path in b.heir_parents:
@@ -266,7 +275,7 @@ class BuiltModsTest(unittest.TestCase):
         allowed = {"SubstanceFriction", "BodyFriction", "Pos", "ParentFrame"}
         for name, b in built().items():
             for path, data in b.files.items():
-                if path in b.heir_parents:
+                if path in b.heir_parents or path.startswith("billboards/"):
                     continue                     # checked attribute by attribute by verify_variants
                 o = _attrs(mrxml.parse(fs().read(path)))
                 p = _attrs(mrxml.parse(data))
@@ -300,9 +309,14 @@ class BuiltModsTest(unittest.TestCase):
     def test_no_value_is_set_to_zero_by_a_mod(self):
         for name, b in built().items():
             values = [x[3] for x in b.log if x[1] != "WinchSocket"]
-            for path in b.heir_parents:
-                values += [a.value for a in _all_attrs(mrxml.parse(b.files[path]))
-                           if a.name not in ("File", "Torque", "DiffLockType", "Type")]
+            stock = mrxml.Resolver(fs())
+            for path, parent in b.heir_parents.items():
+                # full copies: only the values the mod changed, not the stock ones copied along
+                kind = "trucks" if path.startswith("classes/trucks/") else "wheels"
+                old = _attrs(mrxml.parse(mrxml.serialize(stock.resolve(kind, parent)[0])))
+                new = _attrs(mrxml.parse(b.files[path]))
+                values += [v for k, v in new.items() if old.get(k) != v
+                           and k[-1] not in ("File", "Torque", "DiffLockType", "Type")]
             for new in values:
                 if str(new).startswith("("):
                     continue           # vectors may hold 0 components

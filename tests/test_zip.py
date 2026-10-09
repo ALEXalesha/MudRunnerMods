@@ -88,6 +88,16 @@ class ZipLawTest(unittest.TestCase):
         old = common.fs().read("classes/trucks/uaz469.xml")
         self.assertEqual(len(new), len(old))
         self.assertEqual([i for i in range(len(old)) if old[i] != new[i]], [old.index(b'FuelCapacity="80"') + 15])
+        for name, path in build_probe.SUB_PROBES.items():
+            sub = build_probe.build_sub(name, os.path.dirname(out), GAME)
+            self.assertEqual(zipcheck.problems(sub), [], name)
+            with zipfile.ZipFile(sub) as z:
+                names = z.namelist()
+                self.assertEqual(len(names), 1, name)
+                if path:
+                    self.assertEqual(z.read(path), common.fs().read(path), name)
+                else:
+                    self.assertFalse(common.fs().exists(names[0]))        # overrides nothing
 
 
 if __name__ == "__main__":
