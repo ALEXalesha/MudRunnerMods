@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "workshop_prefix": "otf",
   "workshop_suffix": "Infinite Fuel",
+  "suffix_ru": "Бесконечное топливо",
   "ops": [
     {
       "kind": "trucks",

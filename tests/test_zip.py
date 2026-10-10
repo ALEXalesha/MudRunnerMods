@@ -93,6 +93,13 @@ class ZipLawTest(unittest.TestCase):
             self.assertEqual(zipcheck.problems(sub), [], name)
             with zipfile.ZipFile(sub) as z:
                 names = z.namelist()
+                if path == "strings":                 # one new strings file per language
+                    self.assertEqual(len(names), 12, name)
+                    for n in names:
+                        self.assertRegex(n, r"^strings/[a-z-]+/opentrail_probe\.txt$")
+                        self.assertFalse(common.fs().exists(n))           # overrides nothing
+                        self.assertEqual(z.read(n)[:2], b"\xff\xfe")
+                    continue
                 self.assertEqual(len(names), 1, name)
                 if path:
                     self.assertEqual(z.read(path), common.fs().read(path), name)

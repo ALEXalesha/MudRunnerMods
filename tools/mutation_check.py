@@ -21,7 +21,11 @@ import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# (file, old text, new text, test module pattern, test name filter)
+# (file, old text, new text, test module pattern, test name filter), or for a mutation
+# that needs several edits at once: ([(file, old, new), ...], pattern, name)
+NO_GUARD = ("tools/build_mods.py",
+            '    return sorted(p for p in files if fs.exists(p) and (heir or p.startswith(mrxml.KIND_DIRS["trucks"])))',
+            "    return []")       # the build's own guard off: the law test must catch it alone
 MUTATIONS = [
     ("mods/no_damage/mod.json", '"set": "64000"', '"set": "1000"', "test_mods.py",
      "test_each_mod_alone_patches_every_target"),
@@ -48,7 +52,9 @@ MUTATIONS = [
      'if False:\n                    removed.add', "test_xml.py", "test_positional_merge_and_remove"),
     ("tools/mrxml.py", "            merged.attrs.update(own_attrs)", "            pass", "test_xml.py",
      "test_templates_local_chain_and_include"),
-    ("tools/mrxml.py", '        c.raw_index = counts.get(c.tag, 0)', '        c.raw_index = 0',
+    # full copies (10.10; raw_index only served the old thin heirs): a copy that loses an element
+    ("tools/mrxml.py", "    for c in node.children:\n        out.append(serialize(c, depth + 1))",
+     "    for c in node.children[:-1]:\n        out.append(serialize(c, depth + 1))",
      "test_workshop.py", "test_variants_resolve_to_the_mod_values"),
     ("tools/build_workshop.py", 'encoding="utf-8", newline="\\r\\n") as fh:\n            fh.write(desc)',
      'encoding="utf-8", newline="\\n") as fh:\n            fh.write(desc)', "test_workshop.py",
@@ -74,9 +80,29 @@ MUTATIONS = [
     # third in-game test: replacing a stock truck file crashed "Single player"
     ("mods/infinite_fuel/mod.json", '"as_heirs": true', '"as_heirs": false', "test_mods.py",
      "test_no_package_replaces_a_stock_truck_file"),
-    ("tools/build_workshop.py", """    for (kind, cls), wants in sorted(desires.items()):
-        if not include_dlc and not base_game(fs, kind, cls):""", """    for (kind, cls), wants in sorted(desires.items()):
-        if not base_game(fs, kind, cls):""", "test_mods.py", "test_dlc_trucks_have_heirs"),
+    # (updated 10.10: the copies are picked in plan_variants since the full-copy change)
+    ("tools/build_workshop.py", "if include_dlc or base_game(fs, k[0], k[1])}", "if base_game(fs, k[0], k[1])}",
+     "test_mods.py", "test_dlc_trucks_have_heirs"),
+    # fifth in-game test (10.10): the law "no mod writes to classes/trucks/<stock name>.xml"
+    ([("mods/infinite_fuel/mod.json", '"as_heirs": true', '"as_heirs": false'), NO_GUARD],
+     "test_truck_law.py", "test_no_mod_writes_a_stock_truck_file"),
+    ([("tools/build_workshop.py", '        new = "%s_%s" % (prefix, cls)', "        new = cls"), NO_GUARD],
+     "test_truck_law.py", "test_no_mod_writes_a_stock_truck_file"),
+    ([("tools/build_mods.py", """            if n in heirs:
+                touched[n] = set()
+                continue""", """            if False:
+                touched[n] = set()
+                continue"""), NO_GUARD],
+     "test_truck_law.py", "test_no_mod_writes_a_stock_truck_file"),
+    ("tools/build_workshop.py", '        new = "%s_%s" % (prefix, cls)', "        new = cls",
+     "test_truck_law.py", "test_workshop_folders"),
+    ("tools/build_workshop.py", "    for lang in languages(fs):\n        names = stock_names(fs, lang)",
+     "    for lang in languages(fs)[:1]:\n        names = stock_names(fs, lang)",
+     "test_truck_law.py", "test_new_trucks_have_names_in_every_language"),
+    ("tools/build_workshop.py", '        suffix = suffix_ru if lang == "ru" and suffix_ru else suffix_en',
+     "        suffix = suffix_en", "test_truck_law.py", "test_new_trucks_have_names_in_every_language"),
+    ("tools/install_local.py", '"file: they DELIBERATELY CRASH THE GAME (truck menu), only for diagnosis")',
+     '"file")', "test_install.py", "test_help_marks_the_crashing_probes"),
 ]
 
 
@@ -91,18 +117,26 @@ def copy_repo(dst):
         shutil.copyfile(os.path.join(ROOT, rel), target)
 
 
+def edits_of(m):
+    """[(file, old, new)], test pattern, test name of a mutation entry."""
+    if isinstance(m[0], list):
+        return m[0], m[1], m[2]
+    return [m[:3]], m[3], m[4]
+
+
 def run_one(i, m, python):
-    path, old, new, pattern, name = m
+    edits, pattern, name = edits_of(m)
     tmp = tempfile.mkdtemp(prefix="mrmut_")
     try:
         copy_repo(tmp)
-        full = os.path.join(tmp, path)
-        with open(full, encoding="utf-8", newline="") as fh:
-            text = fh.read()
-        if text.count(old) != 1:
-            return "BROKEN", "mutation text found %d times in %s" % (text.count(old), path)
-        with open(full, "w", encoding="utf-8", newline="") as fh:
-            fh.write(text.replace(old, new))
+        for path, old, new in edits:
+            full = os.path.join(tmp, path)
+            with open(full, encoding="utf-8", newline="") as fh:
+                text = fh.read()
+            if text.count(old) != 1:
+                return "BROKEN", "mutation text found %d times in %s" % (text.count(old), path)
+            with open(full, "w", encoding="utf-8", newline="") as fh:
+                fh.write(text.replace(old, new))
         t0 = time.time()
         r = subprocess.run([python, "-m", "unittest", "discover", "-s", "tests", "-p", pattern, "-k", name],
                            cwd=tmp, capture_output=True, text=True, timeout=1800)
@@ -123,7 +157,9 @@ def main():
             continue
         status, info = run_one(i, m, python)
         results.append(status)
-        print("%2d %-7s %-28s -> %-44s %s" % (i, status, m[0], m[4], info), flush=True)
+        edits, _pattern, name = edits_of(m)
+        print("%2d %-7s %-28s -> %-44s %s" % (i, status, "+".join(e[0] for e in edits)[:28], name, info),
+              flush=True)
     caught = results.count("CAUGHT")
     print("caught %d of %d" % (caught, len(results)))
     return 0 if caught == len(results) else 1

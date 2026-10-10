@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "workshop_prefix": "otd",
   "workshop_suffix": "No Damage",
+  "suffix_ru": "Без поломок",
   "ops": [
     {
       "kind": "trucks",

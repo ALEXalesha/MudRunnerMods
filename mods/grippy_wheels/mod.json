@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "workshop_prefix": "otg",
   "workshop_suffix": "Grippy",
+  "suffix_ru": "Цепкие колёса",
   "ops": [
     {
       "kind": "wheels",

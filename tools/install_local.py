@@ -5,8 +5,10 @@
   python tools/install_local.py --all --apply        # also the opt-in mods
   python tools/install_local.py --mods no_damage,infinite_fuel --apply
   python tools/install_local.py --remove --apply     # take all OpenTrail lines out
-  python tools/install_local.py --probe --apply      # only the byte-identical probe
-  python tools/install_local.py --probe changed --apply   # one stock truck, one value changed
+  python tools/install_local.py --probe names --apply     # only new strings files (names of new trucks)
+  python tools/install_local.py --probe wheel --apply     # one stock wheel file, byte-identical
+  python tools/install_local.py --probe truck --apply     # DELIBERATELY CRASHES THE GAME, diagnosis only
+  (--probe identical and --probe changed also hold a stock truck file: they crash too)
 
 The safe set is every mod except those listed under "opt_in" in mods/order.json
 (Unlocked Trucks: it replaces whole level files). The script prints exactly
@@ -118,10 +120,13 @@ def main():
     ap.add_argument("--mods", help="comma separated mod names (default: the safe set)")
     ap.add_argument("--all", action="store_true", help="include the opt-in mods (Hyper Power, Unlocked Trucks)")
     ap.add_argument("--probe", nargs="?", const="identical",
-                    choices=["identical", "changed", "manifest", "plant", "wheel", "truck"],
+                    choices=["identical", "changed", "manifest", "names", "plant", "wheel", "truck"],
                     help="install only a probe (tools/build_probe.py): identical = 3 stock files byte for "
                          "byte; changed = uaz469.xml with FuelCapacity 80 -> 81; manifest = only a ModStrings "
-                         "file, overrides nothing; plant / wheel / truck = one stock file byte for byte")
+                         "file, overrides nothing; names = only new strings files (how the truck mods name "
+                         "their new trucks), overrides nothing; plant / wheel = one stock file byte for byte; "
+                         "truck = uaz469.xml byte for byte. truck, identical and changed replace a stock truck "
+                         "file: they DELIBERATELY CRASH THE GAME (truck menu), only for diagnosis")
     ap.add_argument("--remove", action="store_true")
     ap.add_argument("--apply", action="store_true")
     a = ap.parse_args()
@@ -135,8 +140,12 @@ def main():
             raise SystemExit("probe not built: run tools/build_probe.py first")
         what = {"identical": "3 stock files, byte-identical", "changed": "uaz469.xml, FuelCapacity 80 -> 81",
                 "manifest": "only a ModStrings file, overrides nothing", "plant": "stump_b.xml, byte-identical",
+                "names": "only strings/<lang>/opentrail_probe.txt, overrides nothing",
                 "wheel": "kamaz_offroad.xml, byte-identical", "truck": "uaz469.xml, byte-identical"}[a.probe]
         print("Installing the probe only (%s): %s" % (what, probe))
+        if a.probe in ("truck", "identical", "changed"):
+            print("WARNING: this probe replaces a stock truck file and DELIBERATELY CRASHES THE GAME at the "
+                  "truck menu. Only for diagnosis. Undo: install_local.py --remove --apply")
         packages = [probe]
         mods = []
     elif not a.remove:

@@ -44,15 +44,22 @@ def build(out_dir, game=build_mods.DEFAULT_GAME):
 
 # Sub-probes, each a separate zip and `install_local.py --probe <name>`:
 #   manifest  only a ModStrings file at the zip root, overrides nothing: is ANY extra mount a problem?
+#   names     only new strings files strings/<lang>/opentrail_probe.txt (one new key), overrides
+#             nothing: does the game accept an extra strings file? (the truck mods name their
+#             new trucks this way since 1.0.0 test 6)
 #   plant     classes/plants/stump_b.xml, byte-identical
 #   wheel     classes/wheels/kamaz_offroad.xml, byte-identical
-#   truck     classes/trucks/uaz469.xml, byte-identical
+#   truck     classes/trucks/uaz469.xml, byte-identical. DELIBERATELY CRASHES THE GAME at the
+#             truck menu (fifth test, 10.10): a stock truck file shadowed by an extra MediaPath
+#             is not accepted. Only for diagnosis, e.g. after a game update.
 SUB_PROBES = {
     "manifest": None,
+    "names": "strings",
     "plant": "classes/plants/stump_b.xml",
     "wheel": "classes/wheels/kamaz_offroad.xml",
     "truck": "classes/trucks/uaz469.xml",
 }
+CRASHES = {"truck"}       # probes known to crash the game: diagnosis only
 MANIFEST = b'<ModStrings>\n\t<String Id="opentrail_probe" Value="OpenTrail probe" />\n</ModStrings>\n'
 
 
@@ -67,6 +74,11 @@ def build_sub(name, out_dir, game=build_mods.DEFAULT_GAME):
     path = SUB_PROBES[name]
     if path is None:
         b.files["opentrail_probe.xml"] = MANIFEST
+    elif path == "strings":
+        import build_workshop
+        for lang in build_workshop.languages(fs):
+            b.files["strings/%s/opentrail_probe.txt" % lang] = build_workshop.strings_txt(
+                {"opentrail_probe": "OpenTrail probe"})
     else:
         b.files[path] = fs.read(path)
     out = os.path.join(out_dir, sub_zip_name(name))

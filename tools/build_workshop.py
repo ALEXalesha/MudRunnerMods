@@ -12,14 +12,18 @@ a stock file and cannot replace it. Downloaded Workshop items confirm this: ever
 file is named after the item id (classes/trucks/1v37v3em.xml) and stock files are
 only referenced (<_parent File="load_logs_short" />).
 
-So a Workshop version adds NEW trucks that inherit the stock ones
-(<_parent File="kamaz4310"/>) and carry the changed values, the way the Editor
-sample "mod_truck_inherited" works. Players pick them in the truck slots at map
-start or spawn them in the Proving Ground. Grippy Wheels also adds inherited
-wheel classes. Only base-game trucks get variants: a variant of a DLC truck has
+So a Workshop version adds NEW trucks: full standalone copies of the stock
+trucks (the stock class resolved and written out, no <_parent>, the format of
+every Workshop truck on this PC) under new names (otf_kamaz4310) with only the
+changed values, each with the stock selection icon billboards/trucks/<new>.dds
+and a friendly name in strings.xml (<ModStrings>). Players pick them in the
+truck slots at map start or spawn them in the Proving Ground. Grippy Wheels also
+adds wheel copies. Only base-game trucks get variants: a variant of a DLC truck has
 a different file name, and the game checks DLC ownership by asset name (the exe
 holds a list "usa level_dlc3_01,...,ford_f150,..."), so a variant could hand out
-paid DLC trucks to players without the DLC.
+paid DLC trucks to players without the DLC. The local packages (build_mods.py) use
+the same copies, DLC trucks included (the player owns the DLC there), and name the
+trucks through strings/<language>/opentrail_<mod>.txt (name_files below).
 
 Winch Anchors (plant classes) and Unlocked Trucks (level files) change stock
 files only, so they have no Workshop version.
@@ -29,8 +33,9 @@ Layout per mod:
       mod/                    copy the CONTENTS into <Editor>/Media/_mods/<mod id>/
           strings.xml         friendly names (<ModStrings>, English: mod
                               localization is not supported, guide step 7)
-          classes/trucks/...  inherited trucks
-          classes/wheels/...  inherited wheels (Grippy Wheels)
+          classes/trucks/...  full truck copies
+          classes/wheels/...  wheel copies (Grippy Wheels)
+          billboards/trucks/  selection icons of the new trucks (.dds)
           preview.png         512x512, under 1 MB
       steam_page.txt          what to type into the Publish dialog (CRLF)
       steam_description.txt   only the description, to copy whole (CRLF)
@@ -57,9 +62,9 @@ class WorkshopError(Exception):
 
 # --------------------------------------------------------------------------- names
 
-def stock_names(fs):
-    """English display names from strings/en/assets.txt (UTF-16, '/key' then value)."""
-    raw = fs.read("strings/en/assets.txt")
+def stock_names(fs, lang="en"):
+    """Display names from strings/<lang>/assets.txt (UTF-16, '/key' then value)."""
+    raw = fs.read("strings/%s/assets.txt" % lang)
     text = raw.decode("utf-16")
     names = {}
     key = None
@@ -70,6 +75,12 @@ def stock_names(fs):
             names.setdefault(key, line.strip())
             key = None
     return names
+
+
+def languages(fs):
+    """The language folders of the game: strings/<lang>/assets.txt (en, ru, fr, ...)."""
+    return sorted(p.split("/")[1] for p in fs.files if p.startswith("strings/") and p.endswith("/assets.txt")
+                  and p.count("/") == 2)
 
 
 # --------------------------------------------------------------------------- child files
@@ -265,8 +276,8 @@ def description(spec, n_trucks, n_wheels):
         "\"<truck> (%s)\". Pick them in the truck slots when you start a map, or spawn them in the Proving Ground. "
         "The trucks placed on the maps stay stock." % (
             n_trucks, (" and %d wheel types" % n_wheels) if n_wheels else "", spec["workshop_suffix"]),
-        "DLC trucks are not included (they need the DLC). The full version that changes every stock and DLC truck "
-        "directly is on the project page (local install).",
+        "DLC trucks are not included (they need the DLC). The local version on the project page adds the same "
+        "copies of the DLC trucks too (manual install, for players who own the DLC).",
         "",
         "Single player. Not affiliated with Saber Interactive or Focus Entertainment.",
     ]
@@ -276,8 +287,8 @@ def description(spec, n_trucks, n_wheels):
         "с именем \"<грузовик> (%s)\". Их выбирают в слотах грузовиков при старте карты или вызывают на полигоне "
         "(Proving Ground). Грузовики, стоящие на картах, остаются обычными." % (
             n_trucks, (" и %d типов колёс" % n_wheels) if n_wheels else "", spec["workshop_suffix"]),
-        "Грузовиков из DLC здесь нет (для них нужно DLC). Полная версия, которая меняет все обычные и DLC "
-        "грузовики напрямую, есть на странице проекта (установка вручную).",
+        "Грузовиков из DLC здесь нет (для них нужно DLC). Локальная версия на странице проекта добавляет такие же "
+        "копии и грузовиков из DLC (установка вручную, для тех, у кого DLC есть).",
         "",
         "Одиночная игра. Не связано с Saber Interactive и Focus Entertainment.",
     ]
@@ -309,13 +320,51 @@ def display_name(parent, names, stock, kind):
     return parent.replace("_", " ")
 
 
-def strings_xml(variants, names, suffix, stock):
-    lines = ["<ModStrings>"]
+def variant_names(variants, names, suffix, stock, fallback=None):
+    """{new class: "<stock display name> (<suffix>)"} for every variant; a name the
+    language lacks comes from `fallback` (English)."""
+    out = {}
     for (kind, new), (_xml, parent) in sorted(variants.items()):
         base = display_name(parent, names, stock, kind)
-        lines.append('\t<String Id="%s" Value="%s (%s)" />' % (new, _xml_escape(base), suffix))
+        if fallback is not None and base == parent.replace("_", " "):
+            base = display_name(parent, fallback, stock, kind)
+        out[new] = "%s (%s)" % (base, suffix)
+    return out
+
+
+def strings_xml(variants, names, suffix, stock):
+    lines = ["<ModStrings>"]
+    for new, value in sorted(variant_names(variants, names, suffix, stock).items()):
+        lines.append('\t<String Id="%s" Value="%s" />' % (new, _xml_escape(value)))
     lines.append("</ModStrings>")
     return "\n".join(lines) + "\n"
+
+
+def strings_txt(entries):
+    """A game strings file: UTF-16 LE with BOM, CRLF, '/key' line, value line, blank line
+    (the format of strings/en/assets.txt)."""
+    blocks = ["/%s\r\n%s\r\n" % (k, v.replace("\r", " ").replace("\n", " ")) for k, v in sorted(entries.items())]
+    return b"\xff\xfe" + "\r\n".join(blocks).encode("utf-16-le")
+
+
+def name_files(variants, fs, stock, suffix_en, suffix_ru, file_id):
+    """{path: bytes}: names of the new classes for the local packages.
+
+    The game reads <ModStrings> only from a Steam Workshop item (the exe opens
+    "%llx.xml", the item id). For a package mounted through Config.xml the names go
+    into a NEW strings file per language, strings/<lang>/opentrail_<file_id>.txt:
+    the game enumerates strings/<lang>/*.txt (china.txt exists only in two
+    languages and its name is not in the exe), so the file is read and no stock
+    strings file is replaced. Every language folder gets one, Russian with a
+    Russian suffix, the others with the English one."""
+    en = stock_names(fs, "en")
+    out = {}
+    for lang in languages(fs):
+        names = stock_names(fs, lang)
+        suffix = suffix_ru if lang == "ru" and suffix_ru else suffix_en
+        entries = variant_names(variants, names, suffix, stock, fallback=en)
+        out["strings/%s/opentrail_%s.txt" % (lang, file_id)] = strings_txt(entries)
+    return out
 
 
 def _xml_escape(s):

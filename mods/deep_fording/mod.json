@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "workshop_prefix": "otw",
   "workshop_suffix": "Deep Fording",
+  "suffix_ru": "Глубокий брод",
   "ops": [
     {
       "kind": "trucks",

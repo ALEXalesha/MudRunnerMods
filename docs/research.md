@@ -75,6 +75,21 @@ stock files in `Media.zip` and the DLC archives.
 - The preview can only be changed by publishing again (source 2).
 - Unpublished mods can be tested in the Proving Ground (source 1).
 
+### Truck names for local packages (10.10)
+
+- The exe reads `<ModStrings>` from `%llx.xml`, the Workshop item id, next to
+  `/%llx.zip` and "Steam| Cant get item %llx install info": only Workshop items
+  get names that way. A zip mounted through a Config.xml MediaPath has no id.
+- Game strings are `strings/<lang>/*.txt` (UTF-16 LE with BOM, CRLF, `/key` line
+  then the value). The exe enumerates the folder (PhysFS `PHYSFS_enumerateFiles`,
+  "System| Unrecognized strings file extension '%s'"); `china.txt` exists only in
+  `en` and `zh-si` and its name is not in the exe, so files are found by listing,
+  not by a fixed list. A NEW file `strings/<lang>/opentrail_<mod>.txt` in a package
+  therefore adds keys without replacing a stock file. Display key of a truck =
+  its file name (`/kamaz4310` -> `C-4310` in `assets.txt`). Duplicate keys are
+  reported ("System| Duplicated string '%s'"), so every mod has its own prefix.
+  To confirm in game: `install_local.py --probe names` (6th test).
+
 ## Findings from the game files
 
 ### Truck XML (`classes/trucks`, 144 files: 73 base, 71 DLC; 36 drivable trucks)

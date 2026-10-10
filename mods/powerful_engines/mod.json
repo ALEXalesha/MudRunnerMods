@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "workshop_prefix": "otp",
   "workshop_suffix": "Powerful",
+  "suffix_ru": "Мощный мотор",
   "ops": [
     {
       "kind": "trucks",

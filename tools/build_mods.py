@@ -41,22 +41,27 @@ when only FuelCapacity changed (wheel and plant replacements worked). The truck
 mods ("as_heirs": true in mod.json) therefore never replace a stock truck file:
 their package holds NEW classes: full copies of the stock truck files under new
 names (otf_kamaz4310.xml) with only the changed values, plus a copy of the
-selection icon billboards/trucks/<name>.dds. (Thin heirs with <_parent> and one
-value crashed at truck selection in the fourth test.) The stock trucks on the maps stay stock; the new
-trucks are picked in the truck slots at map start or spawned in the Proving
-Ground. `--only` with several truck mods builds combined heirs (otc_*).
+selection icon billboards/trucks/<name>.dds and the display names in a new
+strings file per language, strings/<lang>/opentrail_<mod>.txt ("C-4310 (Infinite
+Fuel)"). (Thin heirs with <_parent> and one value crashed at truck selection in
+the fourth test; the full copies passed the fifth.) The stock trucks on the maps
+stay stock; the new trucks are picked in the truck slots at map start or spawned
+in the Proving Ground. `--only` with several truck mods builds combined copies
+(otc_*). A truck mod package ships no stock path at all, and no package ships a
+stock classes/trucks/*.xml (forbidden_files, checked on every build).
 
 Load order and shared files
 ---------------------------
 mods/order.json lists the mods from the top of the Config.xml MediaPath list
 (highest priority) to the bottom. The game uses the first copy of a file it
-finds. When several of our mods change the same file (the truck files are
-shared by six mods), the copy in a mod also carries the changes of every mod
-BELOW it in that list. "replaces" names alternatives (Hyper Power replaces
-Powerful Engines): their changes are not inherited.
+finds. When several of our mods change the same file, the copy in a mod also
+carries the changes of every mod BELOW it in that list. Since the truck mods
+ship new trucks with their own prefixes, only the wheel and plant mods could
+share a file, and they do not; so today every package stands alone. "replaces"
+names alternatives (Hyper Power replaces Powerful Engines).
 
 Usage:
-  python tools/build_mods.py [--game DIR] [--out DIR] [--only a,b,c] [--skip-levels]
+  python tools/build_mods.py [--game DIR] [--out DIR] [--only a,b,c] [--skip-levels] [--no-names]
 """
 
 import argparse
@@ -463,11 +468,13 @@ class Built(object):
         self.zip_path = None
 
 
-def build_all(game_dir, out_dir=None, only=None, skip_levels=False, verbose=True, fs=None):
+def build_all(game_dir, out_dir=None, only=None, skip_levels=False, verbose=True, fs=None, names=True):
     """Build every mod. Returns {name: Built}.
 
     only: list of mod names for a custom package; then ONE package is built with
     exactly those mods' changes (no chain), named OpenTrail_Custom.zip.
+    names: False leaves out the strings files with the new trucks' names (a fallback
+    in case the game refuses an extra strings file; then the trucks show their ids).
     """
     fs = fs or mrxml.GameFs(game_dir)
     stock = mrxml.Resolver(fs)
@@ -510,12 +517,18 @@ def build_all(game_dir, out_dir=None, only=None, skip_levels=False, verbose=True
         b.log = p.log
         chosen_heirs = [n for n in names if n in heirs]
         if chosen_heirs:
-            combo = {"id": "custom", "workshop_prefix": "otc", "ops": []}
-            for n in chosen_heirs:
-                combo["ops"].extend(load_spec(n)["ops"])
-            hf, hp = heir_package(combo, fs, stock)
+            specs = [load_spec(n) for n in chosen_heirs]
+            combo = {"id": "custom", "workshop_prefix": "otc", "ops": [],
+                     "workshop_suffix": " + ".join(x["workshop_suffix"] for x in specs),
+                     "suffix_ru": " + ".join(x.get("suffix_ru") or x["workshop_suffix"] for x in specs)}
+            for x in specs:
+                combo["ops"].extend(x["ops"])
+            hf, hp = heir_package(combo, fs, stock, names)
             b.files.update(hf)
             b.heir_parents.update(hp)
+        if forbidden_files(fs, b.files, heir=False):
+            raise BuildError("custom replaces stock truck files (crashes the game): %s"
+                             % forbidden_files(fs, b.files, heir=False)[:3])
         bad = limit_violations(fs, b.files)
         if bad:
             raise BuildError("custom: value outside the game's limits: %s" % (bad[0],))
@@ -531,16 +544,16 @@ def build_all(game_dir, out_dir=None, only=None, skip_levels=False, verbose=True
         lower = [n for n in reversed(order[i + 1:]) if n not in replaces.get(name, []) and n not in heirs]
         b = Built(name, spec)
         if name in heirs:
-            b.files, b.heir_parents = heir_package(spec, fs, stock)
+            b.files, b.heir_parents = heir_package(spec, fs, stock, names)
         else:
             p, touched = run(lower + [name])
             for path in sorted(touched[name]):
                 b.files[path] = p.overlay[path]
                 b.file_mods[path] = [n for n in reversed(lower + [name]) if path in touched[n]]
             b.log = [x for x in p.log if x[0] in touched[name]]
-        if stock_truck_replacements(fs, b.files):
-            raise BuildError("%s replaces stock truck files (crashes the game): %s"
-                             % (name, stock_truck_replacements(fs, b.files)[:3]))
+        if forbidden_files(fs, b.files, heir=name in heirs):
+            raise BuildError("%s replaces stock files it must not (crashes the game): %s"
+                             % (name, forbidden_files(fs, b.files, heir=name in heirs)[:3]))
         _levels(b, fs, plans[name][2], skip_levels)
         if not b.files and not plans[name][2]:
             raise BuildError("%s changes nothing" % name)
@@ -555,8 +568,9 @@ def build_all(game_dir, out_dir=None, only=None, skip_levels=False, verbose=True
         if verbose:
             print("== %s: %d class files%s, %d levels%s" % (spec["title"],
                                                             sum(1 for p in b.files if p.endswith(".xml")),
-                                                            " (new heir trucks)" if b.heir_parents else "", len(b.levels),
-                                                          (" -> " + b.zip_path) if b.zip_path else ""))
+                                                            (" (new trucks %s_*)" % spec["workshop_prefix"])
+                                                            if b.heir_parents else "", len(b.levels),
+                                                            (" -> " + b.zip_path) if b.zip_path else ""))
             summarize(b)
     return result
 
@@ -565,9 +579,10 @@ def is_heir_mod(name):
     return bool(load_spec(name).get("as_heirs"))
 
 
-def heir_package(spec, fs, stock):
+def heir_package(spec, fs, stock, names=True):
     """{path: bytes} of new trucks for one heir mod (base game and DLC, local use): full
-    copies of the stock truck files under new names plus their selection icons."""
+    copies of the stock truck files under new names plus their selection icons and
+    (names=True) their display names in strings/<lang>/opentrail_<id>.txt."""
     import build_workshop
     variants = build_workshop.plan_variants(spec["id"], spec, fs, stock, include_dlc=True)
     build_workshop.verify_variants(spec["id"], spec, variants, fs, stock)
@@ -577,12 +592,22 @@ def heir_package(spec, fs, stock):
         files[path] = xml.encode("utf-8")
         parents[path] = parent
     files.update(build_workshop.billboard_copies(variants, fs))
+    if names:
+        files.update(build_workshop.name_files(variants, fs, stock, spec["workshop_suffix"],
+                                               spec.get("suffix_ru"), spec["id"]))
     return files, parents
 
 
 def stock_truck_replacements(fs, files):
     """Paths in a package that replace a stock truck class file (the crash cause)."""
     return sorted(p for p in files if p.startswith(mrxml.KIND_DIRS["trucks"]) and fs.exists(p))
+
+
+def forbidden_files(fs, files, heir):
+    """Paths a package must not ship: a stock classes/trucks/*.xml in any package (the
+    game crashes on the truck menu, tests 3 to 5); for a truck mod (heir=True, new
+    trucks only) any stock path at all."""
+    return sorted(p for p in files if fs.exists(p) and (heir or p.startswith(mrxml.KIND_DIRS["trucks"])))
 
 
 def limit_violations(fs, files):
@@ -672,12 +697,14 @@ def main():
     ap.add_argument("--out", default=os.path.join(ROOT, "build", "local"))
     ap.add_argument("--only", help="comma separated mod names: one custom package with exactly these")
     ap.add_argument("--skip-levels", action="store_true", help="do not write the big level files")
+    ap.add_argument("--no-names", action="store_true",
+                    help="leave out the strings files that name the new trucks (fallback: the trucks show ids)")
     a = ap.parse_args()
     if os.path.isdir(a.out) and os.listdir(a.out):
         to_recycle_bin(a.out)
     os.makedirs(a.out, exist_ok=True)
     only = [x.strip() for x in a.only.split(",")] if a.only else None
-    build_all(a.game, a.out, only=only, skip_levels=a.skip_levels)
+    build_all(a.game, a.out, only=only, skip_levels=a.skip_levels, names=not a.no_names)
     return 0
 
 

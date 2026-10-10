@@ -246,8 +246,8 @@ class BuiltModsTest(unittest.TestCase):
         n = 0
         for name, b in built().items():
             for path, data in b.files.items():
-                if path.startswith("billboards/"):
-                    continue                     # selection icons: copied stock .dds bytes
+                if path.startswith(("billboards/", "strings/")):
+                    continue                     # selection icons (stock .dds bytes), names (test_truck_law)
                 new = mrxml.decode(data)
                 tops = mrxml.parse(new)
                 if path in b.heir_parents:
@@ -275,7 +275,7 @@ class BuiltModsTest(unittest.TestCase):
         allowed = {"SubstanceFriction", "BodyFriction", "Pos", "ParentFrame"}
         for name, b in built().items():
             for path, data in b.files.items():
-                if path in b.heir_parents or path.startswith("billboards/"):
+                if path in b.heir_parents or path.startswith(("billboards/", "strings/")):
                     continue                     # checked attribute by attribute by verify_variants
                 o = _attrs(mrxml.parse(fs().read(path)))
                 p = _attrs(mrxml.parse(data))
