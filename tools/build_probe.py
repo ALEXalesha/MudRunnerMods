@@ -21,8 +21,11 @@ import mrxml  # noqa: E402
 import zipcheck  # noqa: E402
 
 PROBE_FILES = ["classes/trucks/uaz469.xml", "classes/wheels/kamaz_offroad.xml", "classes/plants/stump_b.xml"]
-PROBE_ZIP = "OpenTrail_Probe_Identical.zip"
-CHANGED_ZIP = "OpenTrail_Probe_Changed.zip"     # uaz469.xml with FuelCapacity 80 -> 81, nothing else
+# Names at most 16 characters before .zip (engine_limits.ARCHIVE_NAME_MAX). Until 10.10
+# they were OpenTrail_Probe_<Name>.zip (21 to 25): every probe with a truck crashed
+# the game for that reason alone, not for its content.
+PROBE_ZIP = "otprobe_ident.zip"
+CHANGED_ZIP = "otprobe_changed.zip"     # uaz469.xml with FuelCapacity 80 -> 81, nothing else
 
 
 def build(out_dir, game=build_mods.DEFAULT_GAME):
@@ -49,9 +52,9 @@ def build(out_dir, game=build_mods.DEFAULT_GAME):
 #             new trucks this way since 1.0.0 test 6)
 #   plant     classes/plants/stump_b.xml, byte-identical
 #   wheel     classes/wheels/kamaz_offroad.xml, byte-identical
-#   truck     classes/trucks/uaz469.xml, byte-identical. DELIBERATELY CRASHES THE GAME at the
-#             truck menu (fifth test, 10.10): a stock truck file shadowed by an extra MediaPath
-#             is not accepted. Only for diagnosis, e.g. after a game update.
+#   truck     classes/trucks/uaz469.xml, byte-identical. With the long name it crashed the game
+#             (04.10, as OpenTrail_Probe_Identical); with the short name it tells whether a
+#             stock truck file can be shadowed at all (7th test).
 SUB_PROBES = {
     "manifest": None,
     "names": "strings",
@@ -59,12 +62,12 @@ SUB_PROBES = {
     "wheel": "classes/wheels/kamaz_offroad.xml",
     "truck": "classes/trucks/uaz469.xml",
 }
-CRASHES = {"truck"}       # probes known to crash the game: diagnosis only
+
 MANIFEST = b'<ModStrings>\n\t<String Id="opentrail_probe" Value="OpenTrail probe" />\n</ModStrings>\n'
 
 
 def sub_zip_name(name):
-    return "OpenTrail_Probe_%s.zip" % name.capitalize()
+    return "otprobe_%s.zip" % name
 
 
 def build_sub(name, out_dir, game=build_mods.DEFAULT_GAME):

@@ -103,7 +103,7 @@ class NoStockTruckFileTest(unittest.TestCase):
         and changed hold uaz469.xml on purpose (diagnosis only)."""
         local = os.path.join(common.ROOT, "build", "local")
         for f in sorted(os.listdir(local)):
-            if f.startswith("OpenTrail_") and f.endswith(".zip") and not f.startswith("OpenTrail_Probe_"):
+            if f.startswith("opentrail_") and f.endswith(".zip"):          # not the otprobe_ zips
                 with zipfile.ZipFile(os.path.join(local, f)) as z:
                     self.assert_clean(z.namelist(), f)
 

@@ -1,6 +1,7 @@
 {
   "id": "unlocked_trucks",
   "title": "Unlocked Trucks",
+  "package": "opentrail_unlock",
   "version": "1.0.0",
   "ops": [
     {

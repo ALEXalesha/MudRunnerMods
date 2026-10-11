@@ -1,6 +1,7 @@
 {
   "id": "awd_difflock",
   "title": "AWD and Diff Lock",
+  "package": "opentrail_awd",
   "version": "1.0.0",
   "workshop_prefix": "ota",
   "workshop_suffix": "AWD",

@@ -1,6 +1,7 @@
 {
   "id": "strong_winch",
   "title": "Winch Anchors",
+  "package": "opentrail_winch",
   "version": "1.0.0",
   "ops": [
     {

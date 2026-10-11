@@ -20,14 +20,14 @@ CONFIG = """<Config Version="20151004">
 
 
 class ConfigEditTest(unittest.TestCase):
-    PKGS = ["C:/Mods/OpenTrail_Hyper_Power.zip", "C:/Mods/OpenTrail_No_Damage.zip"]
+    PKGS = ["C:/Mods/opentrail_hyper.zip", "C:/Mods/opentrail_damage.zip"]
 
     def test_lines_go_above_media_zip_in_order(self):
         out = install_local.edit_config(CONFIG, self.PKGS)
         lines = out.splitlines()
         i = [k for k, l in enumerate(lines) if 'Path="Media.zip"' in l][0]
-        self.assertIn("OpenTrail_Hyper_Power.zip", lines[i - 2])
-        self.assertIn("OpenTrail_No_Damage.zip", lines[i - 1])
+        self.assertIn("opentrail_hyper.zip", lines[i - 2])
+        self.assertIn("opentrail_damage.zip", lines[i - 1])
         self.assertTrue(lines[i - 1].startswith("    <MediaPath"))
 
     def test_idempotent_and_removable(self):
@@ -35,7 +35,7 @@ class ConfigEditTest(unittest.TestCase):
         self.assertEqual(install_local.edit_config(once, self.PKGS), once)
         self.assertEqual(install_local.edit_config(once, []), CONFIG)
         other = install_local.edit_config(once, self.PKGS[1:])
-        self.assertNotIn("Hyper", other)
+        self.assertNotIn("hyper", other)
 
     def test_crlf_kept(self):
         crlf = CONFIG.replace("\n", "\r\n")
@@ -43,8 +43,8 @@ class ConfigEditTest(unittest.TestCase):
         self.assertNotRegex(out, r"(?<!\r)\n")
 
     def test_backslashes_become_slashes(self):
-        out = install_local.edit_config(CONFIG, [r"D:\x\OpenTrail_No_Damage.zip"])
-        self.assertIn('Path="D:/x/OpenTrail_No_Damage.zip"', out)
+        out = install_local.edit_config(CONFIG, [r"D:\x\opentrail_damage.zip"])
+        self.assertIn('Path="D:/x/opentrail_damage.zip"', out)
 
     def test_no_media_line(self):
         with self.assertRaises(ValueError):
@@ -60,9 +60,9 @@ class ConfigEditTest(unittest.TestCase):
         for name in install_local.build_mods.load_order():
             spec = install_local.build_mods.load_spec(name)
             open(os.path.join(local, install_local.build_mods.zip_name(spec)), "wb").close()
-        open(os.path.join(local, "OpenTrail_Probe_Identical.zip"), "wb").close()
-        for n in ("Changed", "Manifest", "Names", "Plant", "Wheel", "Truck"):
-            open(os.path.join(local, "OpenTrail_Probe_%s.zip" % n), "wb").close()
+        open(os.path.join(local, "otprobe_ident.zip"), "wb").close()
+        for n in ("changed", "manifest", "names", "plant", "wheel", "truck"):
+            open(os.path.join(local, "otprobe_%s.zip" % n), "wb").close()
         env = dict(os.environ, OPENTRAIL_NO_GAME_CHECK="1")    # the game may be open on this PC
         r = subprocess.run([sys.executable, os.path.join(common.ROOT, "tools", "install_local.py"),
                             "--config", cfg, "--local", local] + list(args),
@@ -77,37 +77,37 @@ class ConfigEditTest(unittest.TestCase):
         r, text, backup = self.run_tool("--apply")
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertEqual(backup, CONFIG)
-        self.assertNotIn("Unlocked_Trucks", text)
-        self.assertNotIn("Hyper_Power", text)          # alternative to Powerful Engines, opt-in
-        self.assertEqual(text.count("OpenTrail_"), 7)
+        self.assertNotIn("opentrail_unlock", text)
+        self.assertNotIn("opentrail_hyper", text)          # alternative to Powerful Engines, opt-in
+        self.assertEqual(text.count("opentrail_"), 7)
         self.assertIn("Installing 7 mods", r.stdout)
         self.assertIn("Not installed: hyper_power, unlocked_trucks", r.stdout)
 
     def test_all_and_explicit(self):
         r, text, _b = self.run_tool("--all", "--apply")
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn("OpenTrail_Unlocked_Trucks.zip", text)
+        self.assertIn("opentrail_unlock.zip", text)
         r, text, _b = self.run_tool("--mods", "unlocked_trucks,no_damage", "--apply")
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertEqual(text.count("OpenTrail_"), 2)
-        self.assertLess(text.index("No_Damage"), text.index("Unlocked_Trucks"))     # load order kept
+        self.assertEqual(text.count("opentrail_"), 2)
+        self.assertLess(text.index("opentrail_damage"), text.index("opentrail_unlock"))     # load order kept
 
     def test_probe_only(self):
         r, text, _b = self.run_tool("--probe", "--apply")
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertEqual(text.count("OpenTrail_"), 1)
-        self.assertIn("OpenTrail_Probe_Identical.zip", text)
+        self.assertEqual(text.count("otprobe_"), 1)
+        self.assertIn("otprobe_ident.zip", text)
         r3, text3, _b = self.run_tool("--probe", "changed", "--apply")
         self.assertEqual(r3.returncode, 0, r3.stdout + r3.stderr)
-        self.assertIn("OpenTrail_Probe_Changed.zip", text3)
-        self.assertEqual(text3.count("OpenTrail_"), 1)
+        self.assertIn("otprobe_changed.zip", text3)
+        self.assertEqual(text3.count("otprobe_"), 1)
         for n in ("manifest", "names", "plant", "wheel", "truck"):
             r4, text4, _b = self.run_tool("--probe", n, "--apply")
             self.assertEqual(r4.returncode, 0, r4.stdout + r4.stderr)
-            self.assertIn("OpenTrail_Probe_%s.zip" % n.capitalize(), text4)
-            self.assertEqual(text4.count("OpenTrail_"), 1)
-            # the truck probe crashes the game on purpose (fifth test): it must say so
-            self.assertEqual("DELIBERATELY CRASHES THE GAME" in r4.stdout, n == "truck", n)
+            self.assertIn("otprobe_%s.zip" % n, text4)
+            self.assertEqual(text4.count("otprobe_"), 1)
+            # the truck probe replaces a stock truck file: it must say so
+            self.assertEqual("REPLACES A STOCK TRUCK FILE" in r4.stdout, n == "truck", n)
         r2, text2, _b = self.run_tool("--remove", "--apply")
         self.assertEqual(r2.returncode, 0, r2.stdout + r2.stderr)
 
@@ -116,8 +116,8 @@ class ConfigEditTest(unittest.TestCase):
                            capture_output=True, text=True, timeout=60)
         text = " ".join(r.stdout.split())
         self.assertIn("names = only new strings files", text)
-        self.assertIn("DELIBERATELY CRASH THE GAME", text)
-        self.assertIn("only for diagnosis", text)
+        self.assertIn("replace a stock truck file", text)
+        self.assertIn("diagnosis only", text)
 
     def test_dry_run_writes_nothing(self):
         r, text, backup = self.run_tool()

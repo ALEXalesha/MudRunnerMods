@@ -153,3 +153,26 @@ def read_exe_limits(exe_path):
                 break
         out[("WheelFriction", attr)] = (None if lo is None else round(lo, 4), None if hi is None else round(hi, 4))
     return out
+
+
+# --------------------------------------------------------------------------- archive names
+
+# The longest package name (zip file name without ".zip") the game survives. For a
+# truck (classes/trucks/<name>.xml) or a level (levels/<name>.stg) the exe asks PhysFS
+# which archive the file came from (PHYSFS_getRealDir), and when that is a ".zip" it
+# copies the name between the last '/' and the '.' with strncpy_s(buf, 17, ...), to
+# compare it with the "%llx" ids of the loaded Workshop items. A longer name makes
+# strncpy_s end the game: MSVCR110.dll+0x6d5ff, c0000409, fast fail 5 - every crash
+# of the in-game tests 03.10 to 10.10 (found in the crash dumps on 11.10).
+ARCHIVE_NAME_MAX = 16
+
+
+def read_exe_archive_name_max(exe_path):
+    """ARCHIVE_NAME_MAX read from MudRunner.exe: after `lea rdx, ".zip"` + _stricmp comes
+    `lea edx, [rax+N]` (rax = 0) and `lea rcx, [rsp+x]`, the buffer size of strncpy_s."""
+    pe = _Pe(exe_path)
+    for i in pe.lea_refs(pe.string_vas(b".zip")):
+        m = re.search(rb"\x8d\x50(.)\x48\x8d\x4c\x24", pe.code[i:i + 0x40], re.S)
+        if m:
+            return m.group(1)[0] - 1
+    return None

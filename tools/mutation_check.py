@@ -101,8 +101,18 @@ MUTATIONS = [
      "test_truck_law.py", "test_new_trucks_have_names_in_every_language"),
     ("tools/build_workshop.py", '        suffix = suffix_ru if lang == "ru" and suffix_ru else suffix_en',
      "        suffix = suffix_en", "test_truck_law.py", "test_new_trucks_have_names_in_every_language"),
-    ("tools/install_local.py", '"file: they DELIBERATELY CRASH THE GAME (truck menu), only for diagnosis")',
+    ("tools/install_local.py", '"file: diagnosis only, the game may crash (with the old long names they always did)")',
      '"file")', "test_install.py", "test_help_marks_the_crashing_probes"),
+    # the real crash cause (dumps, 11.10): package name > 16 characters before .zip
+    ("mods/infinite_fuel/mod.json", '"package": "opentrail_fuel"', '"package": "opentrail_infinite_fuel"',
+     "test_archive_names.py", "test_every_package_name_fits"),
+    ("tools/engine_limits.py", "ARCHIVE_NAME_MAX = 16", "ARCHIVE_NAME_MAX = 32",
+     "test_archive_names.py", "test_limit_matches_the_exe"),
+    ([("tools/build_mods.py", "    bad_name = archive_name_problem(out_path)", "    bad_name = None"),
+      ("mods/no_damage/mod.json", '"package": "opentrail_damage"', '"package": "OpenTrail_No_Damage"')],
+     "test_archive_names.py", "test_written_class_packages"),
+    ("tools/install_local.py", ".lower().startswith(MARKS)", ".startswith(MARKS)",
+     "test_archive_names.py", "test_old_long_names_are_still_removed"),
 ]
 
 

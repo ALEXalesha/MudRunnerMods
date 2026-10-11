@@ -475,7 +475,7 @@ def release_assets(folders, local_dir, out_dir):
     os.makedirs(out_dir, exist_ok=True)
     assets = []
     for f in sorted(os.listdir(local_dir)):
-        if f.startswith(FAMILY + "_") and f.endswith(".zip") and "_Probe_" not in f:
+        if f.startswith("opentrail_") and f.endswith(".zip"):          # not the otprobe_ zips
             dst = os.path.join(out_dir, f)
             shutil.copyfile(os.path.join(local_dir, f), dst)
             assets.append(dst)

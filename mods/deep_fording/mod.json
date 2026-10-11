@@ -1,6 +1,7 @@
 {
   "id": "deep_fording",
   "title": "Deep Fording",
+  "package": "opentrail_ford",
   "version": "1.0.0",
   "workshop_prefix": "otw",
   "workshop_suffix": "Deep Fording",

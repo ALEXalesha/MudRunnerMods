@@ -12,7 +12,7 @@ The repository holds no game files. `tools/build_mods.py` reads the class XML fr
 
 Ten ideas, nine mods. The fog of war cannot be removed with game files (see "Not possible").
 
-**The six truck mods add NEW trucks and never touch a stock truck file.** Each changed truck is a full copy of the stock one under its own name, `<prefix>_<stock name>` (for example `otf_kamaz4310`), with the stock selection icon and its own display name, "C-4310 (Infinite Fuel)" (in Russian "C-4310 (Бесконечное топливо)"). The game does not accept a stock `classes/trucks/*.xml` from an extra package: in-game tests 3 to 5 crashed on "Single player", on Esc or at the truck menu, even with a byte-for-byte copy (`--probe truck`), while the new trucks of Infinite Fuel worked (10.10). Pick the new trucks in the truck slots when you start a map, or spawn them in the Proving Ground; the trucks placed on the maps stay stock. Grippy Wheels, Winch Anchors and Unlocked Trucks replace stock wheel, plant and level files (wheels and plants were tested in game and work).
+**The six truck mods add NEW trucks and never touch a stock truck file.** Each changed truck is a full copy of the stock one under its own name, `<prefix>_<stock name>` (for example `otf_kamaz4310`), with the stock selection icon and its own display name, "C-4310 (Infinite Fuel)" (in Russian "C-4310 (Бесконечное топливо)"). (Until 11.10 we thought the game refused stock truck files from an extra package; the crash dumps showed the real cause, a package name longer than 16 characters, see "The real cause of the crashes". Full copies stay: they leave the stock trucks and saves alone.) Pick the new trucks in the truck slots when you start a map, or spawn them in the Proving Ground; the trucks placed on the maps stay stock. Grippy Wheels, Winch Anchors and Unlocked Trucks replace stock wheel, plant and level files (wheels and plants were tested in game and work).
 
 | Mod | New trucks | Name in the game (English / Russian) |
 |---|---|---|
@@ -28,15 +28,15 @@ Ten ideas, nine mods. The fog of war cannot be removed with game files (see "Not
 
 | Mod (package) | What it changes | Covers |
 |---|---|---|
-| Hyper Power (`OpenTrail_Hyper_Power.zip`) | `Motor@Torque` x10, capped at 1,000,000 (the game's limit). For fun. Replaces Powerful Engines; opt-in | 36 drivable trucks, base + DLC |
-| Powerful Engines (`OpenTrail_Powerful_Engines.zip`) | `Motor@Torque` x2.5 (stock 16,000 to 240,000) | 36 trucks |
-| AWD and Diff Lock (`OpenTrail_AWD_and_Diff_Lock.zip`) | Wheels with `Torque="none"` or no Torque get `full`; `DiffLockType="None"` becomes `Default` (switchable) | 10 trucks without AWD or a switchable diff lock |
-| Deep Fording (`OpenTrail_Deep_Fording.zip`) | `Damage@SensationMin/Max` box moved 1 m above its old top (0.2 m tall) | 36 trucks |
-| No Damage (`OpenTrail_No_Damage.zip`) | `Damage@Capacity` 64,000, the game's maximum (stock 160 to 1000) | 36 trucks |
-| Infinite Fuel (`OpenTrail_Infinite_Fuel.zip`) | `TruckData@FuelCapacity` 64,000 l, the game's maximum (stock 40 to 800) | 36 trucks |
-| Grippy Wheels (`OpenTrail_Grippy_Wheels.zip`) | `WheelFriction@SubstanceFriction` x2.5, at least 2.5; `@BodyFriction` x1.5, at least 2.0 | 50 wheel types |
-| Winch Anchors (`OpenTrail_Winch_Anchors.zip`) | `GameData/WinchSocket` on 7 stumps and small trees that had none | 7 plant classes |
-| Unlocked Trucks (`OpenTrail_Unlocked_Trucks.zip`, 295 MB) | `isLocked` cleared in the truck records of the level files | 24 trucks and trailers on 6 maps |
+| Hyper Power (`opentrail_hyper.zip`) | `Motor@Torque` x10, capped at 1,000,000 (the game's limit). For fun. Replaces Powerful Engines; opt-in | 36 drivable trucks, base + DLC |
+| Powerful Engines (`opentrail_power.zip`) | `Motor@Torque` x2.5 (stock 16,000 to 240,000) | 36 trucks |
+| AWD and Diff Lock (`opentrail_awd.zip`) | Wheels with `Torque="none"` or no Torque get `full`; `DiffLockType="None"` becomes `Default` (switchable) | 10 trucks without AWD or a switchable diff lock |
+| Deep Fording (`opentrail_ford.zip`) | `Damage@SensationMin/Max` box moved 1 m above its old top (0.2 m tall) | 36 trucks |
+| No Damage (`opentrail_damage.zip`) | `Damage@Capacity` 64,000, the game's maximum (stock 160 to 1000) | 36 trucks |
+| Infinite Fuel (`opentrail_fuel.zip`) | `TruckData@FuelCapacity` 64,000 l, the game's maximum (stock 40 to 800) | 36 trucks |
+| Grippy Wheels (`opentrail_grip.zip`) | `WheelFriction@SubstanceFriction` x2.5, at least 2.5; `@BodyFriction` x1.5, at least 2.0 | 50 wheel types |
+| Winch Anchors (`opentrail_winch.zip`) | `GameData/WinchSocket` on 7 stumps and small trees that had none | 7 plant classes |
+| Unlocked Trucks (`opentrail_unlock.zip`, 295 MB) | `isLocked` cleared in the truck records of the level files | 24 trucks and trailers on 6 maps |
 
 ### Why some mods work the way they do
 
@@ -77,6 +77,18 @@ Ten ideas, nine mods. The fog of war cannot be removed with game files (see "Not
 | Zero fuel consumption | Not in the files (see above) | The big tank |
 | Trucks unlocked for the start slots | Kept in the profile (`status.unlockedTrucks`) | Not touched; Unlocked Trucks covers the trucks on the maps |
 
+## The real cause of the crashes (11.10): package names longer than 16 characters
+
+Every in-game crash from the first test (03.10) to the sixth (10.10) is the same one: 18 Windows Error Reporting entries and 10 crash dumps (`%LOCALAPPDATA%\CrashDumps\MudRunner.exe.*.dmp`), all `MSVCR110.dll+0x6d5ff`, code `c0000409`, fast-fail code 5 (the C runtime's "invalid parameter"). The stack in every dump: `MudRunner.exe+0x7ef718` called `strncpy_s`, and the 17-byte buffer next to it holds the start of our package name ("penTrail_Infinit", "penTrail_No_Dama", "penTrail_Unlocke", "penTrail_Probe_I", ...).
+
+What the exe does there (read from the machine code): for a truck (`classes/trucks/<name>.xml`) or a level (`levels/<name>.stg`) it asks PhysFS which archive the file came from (`PHYSFS_getRealDir`); if that is a `.zip`, it copies the archive name between the last `/` and the `.` with `strncpy_s(buf, 17, name, len)`, then compares it with the `%llx` id of every loaded Workshop item to find the mod the truck belongs to. Workshop zips are named after the item id (`47f38fe1.zip`, 8 characters), `Media` and `_dlc_oldtimers` fit as well. `OpenTrail_Infinite_Fuel` has 23 characters: `strncpy_s` finds the buffer too small and ends the game.
+
+That explains every result: all packages with trucks or levels crashed, whatever was inside (even byte-identical stock files, 04.10); wheel, plant and strings packages never go through this function, so they worked with equally long names. The Zip64 headers, the engine limits and "stock truck files cannot be shadowed" were real findings or careful choices, but none of them was the crash.
+
+The fix: package names of at most 16 characters before `.zip`, lowercase letters, digits and `_`, never only hex digits (that could look like a Workshop id): `opentrail_fuel.zip`, `opentrail_damage.zip`, ... and the probes `otprobe_<name>.zip`. `tools/engine_limits.py` holds the limit (`ARCHIVE_NAME_MAX = 16`) and reads it back from the exe; the build refuses a longer name; the law `tests/test_archive_names.py` checks every package name, also the files in `build\local`. `install_local.py` still removes the old `OpenTrail_*.zip` lines. **If you put the packages in Config.xml by hand, do not rename them.**
+
+Not explained: on 10.10 at 11:57 `--probe truck` (then named `OpenTrail_Probe_Truck.zip`, 21 characters) left no crash report, although it holds a truck file. And the 10.10 report "Infinite Fuel works": the Config.xml backups show that Infinite Fuel was not installed at all that day before 23:06 (the game then ran with the wheel probe only).
+
 ## Install (local packages)
 
 The game reads extra files through `<MediaPath>` lines in its Config.xml. The first copy of a file wins, so the packages go above `Media.zip`.
@@ -96,7 +108,7 @@ The game reads extra files through `<MediaPath>` lines in its Config.xml. The fi
    ```
    Without `--mods` it installs the safe set: every mod except the opt-in ones (`"opt_in"` in `mods/order.json`: Hyper Power, the alternative to Powerful Engines, and Unlocked Trucks, which replaces whole level files). `--all` adds them. The script prints which mods it installs and which it leaves out. It edits `%APPDATA%\SpinTires MudRunner\Config.xml` (the file the game saves on exit), removes older OpenTrail lines, inserts the new ones above `<MediaPath Path="Media.zip" />` in the load order below and keeps a backup `Config.xml.opentrail-<time>` next to it.
 
-   By hand: add lines like `<MediaPath Path="D:/Games/OpenTrail/OpenTrail_No_Damage.zip" />` above `<MediaPath Path="Media.zip" />`.
+   By hand: add lines like `<MediaPath Path="D:/Games/OpenTrail/opentrail_damage.zip" />` above `<MediaPath Path="Media.zip" />`.
 3. Start the game. The current game build no longer writes `%APPDATA%\SpinTires MudRunner\Log.txt` (it stays from January 2026 even after normal runs without mods, while the profile and Config.xml are rewritten), and a crash leaves no local dump (the exe hands crashes to `SteamAPI_WriteMiniDump`; `Steam\dumps` has nothing from MudRunner). So the check is in game, see below.
 4. For Unlocked Trucks start a new game on the map.
 5. To remove: `install_local.py --remove --apply`, or delete the lines.
@@ -109,10 +121,14 @@ Close the game before every command (the game rewrites Config.xml on exit). Each
 
 ```
 cd <repository>
-.venv\Scripts\python tools\install_local.py --probe names --apply
-    game: main menu, "Single player", the truck menu open as usual (only new strings files, nothing replaced)
 .venv\Scripts\python tools\install_local.py --mods infinite_fuel --apply
-    truck slot or Proving Ground: "A-469 (Infinite Fuel)"; the tank shows 64000 l
+    THE KEY CHECK: the same package that crashed on 10.10, now named opentrail_fuel.zip.
+    Truck menu opens, "A-469 (Infinite Fuel)" is in the list, the tank shows 64000 l
+.venv\Scripts\python tools\install_local.py --mods unlocked_trucks --apply
+    "Single player" opens; new game on Flood or Coast: the trucks on the map are not locked
+.venv\Scripts\python tools\install_local.py --probe truck --apply
+    for the record: a stock uaz469.xml byte for byte under a short name. Truck menu opens = stock
+    truck files CAN be shadowed (they were never the problem)
 .venv\Scripts\python tools\install_local.py --mods no_damage --apply
     "A-469 (No Damage)": hits barely move the damage bar (64000)
 .venv\Scripts\python tools\install_local.py --mods powerful_engines --apply
@@ -123,25 +139,25 @@ cd <repository>
     "B-130 (AWD)" or "C-65115 (AWD)": AWD and diff lock can be switched on
 .venv\Scripts\python tools\install_local.py --mods deep_fording --apply
     "C-4310 (Deep Fording)": deep water, no water damage, the engine does not stall
-.venv\Scripts\python tools\install_local.py --mods grippy_wheels --apply
-    any stock truck: much better grip in mud
-.venv\Scripts\python tools\install_local.py --mods strong_winch --apply
-    winch to a small stump or a small tree
-.venv\Scripts\python tools\install_local.py --mods unlocked_trucks --apply
-    new game on Flood or Coast: the trucks on the map are not locked
 .venv\Scripts\python tools\install_local.py --apply
     the safe set together (all but Hyper Power and Unlocked Trucks)
 .venv\Scripts\python tools\install_local.py --remove --apply
     back to the plain game
 ```
 
+Grippy Wheels, Winch Anchors and `--probe names` already worked on 10.10. If a check crashes, the crash dump in `%LOCALAPPDATA%\CrashDumps` (newest `MudRunner.exe.*.dmp`) tells why.
+
 ## What went wrong in the first test, and the zip law
+
+**Corrected on 11.10:** the first test crashed for the package name too (the same crash signature as all later ones). The Zip64 problem below is real for PhysFS 2.0 and stays fixed, but it was not the crash.
 
 The first in-game test of 1.0.0 (all nine packages) did not reach the main menu: the game went straight into a map and crashed on Esc. Without packages it worked. The cause, found without starting the game: the Unlocked Trucks zip. Python's streaming zip writer, called with `force_zip64=True`, wrote the six level files with Zip64 local headers ("version needed" 4.5, sizes 0xFFFFFFFF, a Zip64 extra field) while the central directory held the real sizes. MudRunner reads zips with PhysFS 2.0 (its messages "ZIP bigger than 2 gigs?!" and "Corrupted archive" are in the exe). That version has no Zip64 support and compares every local header with the central directory before it opens a file, so all six level files were "corrupted". The first archive that lists a path owns it, so the game did not fall back to Media.zip either.
 
 `tools/zipcheck.py` checks these PhysFS 2.0 rules: no Zip64 anywhere, local header = central directory (version, method, CRC, sizes), deflate or store only, under 2 GB. Media.zip, the DLC archives, MeshCache.zip and all 8 Workshop items installed on this PC pass; the 1.0.0 level package failed with 24 problems. The build now runs the check on every package and stops on any problem, and the level files are written as plain zip 2.0 entries (size given up front). The class-file packages were always fine.
 
 ## Engine limits (second in-game test)
+
+**Corrected on 11.10:** the second test crashed for the package name as well. The exe does clamp these values (and reports them), so the limits stay.
 
 With the safe set the main menu opened, but the game crashed on "Single player", the screen that loads the trucks of the maps. The byte-level comparison of every shipped file with the stock one found nothing (same encoding, no BOM, same line ends, same elements, only the target attributes changed). The cause is in the exe: it reads some attributes through range-checked getters, clamps a value outside the range and reports it through its XML error logger ("| Clamping node %s value %d (maximum is %d)"). Three mods were outside:
 
@@ -161,16 +177,21 @@ With the safe set the main menu opened, but the game crashed on "Single player",
 | Probe | Content | In game |
 |---|---|---|
 | `manifest` | only a `<ModStrings>` file at the zip root, overrides nothing | works (10.10) |
-| `names` | only `strings/<lang>/opentrail_probe.txt`, the way the truck mods name their trucks, overrides nothing | to check (6th test) |
+| `names` | only `strings/<lang>/opentrail_probe.txt`, the way the truck mods name their trucks, overrides nothing | works (10.10) |
 | `plant` | `classes/plants/stump_b.xml`, byte for byte | works |
 | `wheel` | `classes/wheels/kamaz_offroad.xml`, byte for byte | works |
-| `truck` | `classes/trucks/uaz469.xml`, byte for byte | **deliberately crashes the game, only for diagnosis** (truck menu, 10.10) |
-| `identical` | the three stock files above | crashes too (holds `uaz469.xml`), diagnosis only |
-| `changed` | `uaz469.xml` with FuelCapacity 80 -> 81 | crashes too, diagnosis only |
+| `truck` | `classes/trucks/uaz469.xml`, byte for byte: **replaces a stock truck file, diagnosis only** | crashed only because of the long name; with the short name: 7th test |
+| `identical` | the three stock files above | crashed 04.10 (long name) |
+| `changed` | `uaz469.xml` with FuelCapacity 80 -> 81 | crashed 04.10 (long name) |
+
+The probe zips are named `otprobe_<name>.zip` (at most 16 characters, see above).
 
 The texture and mesh caches (`TextureCache.zip` as `_t/`, `MeshCache.zip` as `_m/`) are keyed by mesh and texture names (`_m/trucks_kamaz4310`); the exe falls back to `MeshCache/` and the source `meshes/` / `textures/` folders. Class XML files are not part of any cache, and the packages ship no mesh or texture, so a changed truck XML cannot make a cache entry stale. Workshop items ship their own `_m/` and `_t/` entries only because they bring new meshes.
 
-## Tests 3 to 5 in game: stock truck files cannot be shadowed
+## Tests 3 to 5 in game (conclusion corrected on 11.10)
+
+**Corrected:** none of the crashes below came from the truck files. All of them are the package-name crash described above; the long names were the only thing the crashing packages had in common. What follows is the record of what we believed then.
+
 
 Third test (04.10), single mods: Winch Anchors alone (plant files) and Grippy Wheels alone (wheel files) work; Infinite Fuel alone (truck files, only `FuelCapacity` changed, 64,000, within the limits) crashed on "Single player" and on Esc. Fourth test (09.10): thin heirs (`<_parent File="kamaz4310"/>` plus one value) crashed at the truck menu, and so did a byte-for-byte copy of a truck file in an extra package. Fifth test (10.10, commit b7bdd72): `--probe manifest`, `plant` and `wheel` work; `--probe truck` (one stock truck file, byte for byte) crashes when the truck menu opens; Infinite Fuel as full copies `otf_*` under their own names works, the truck in the slot drives.
 
@@ -196,7 +217,7 @@ Every truck mod adds its own trucks, so no two packages ship the same file (a te
 .venv\Scripts\python tools\build_mods.py --only infinite_fuel,no_damage,grippy_wheels
 ```
 
-This writes `build\local\OpenTrail_Custom.zip`: trucks `otc_<truck>` named "C-4310 (Infinite Fuel + No Damage)" plus the chosen wheel or plant changes. Hyper Power and Powerful Engines cannot go into one custom package.
+This writes `build\local\opentrail_custom.zip`: trucks `otc_<truck>` named "C-4310 (Infinite Fuel + No Damage)" plus the chosen wheel or plant changes. Hyper Power and Powerful Engines cannot go into one custom package.
 
 ## Steam Workshop
 
@@ -233,10 +254,11 @@ A mod in `mods/<name>/mod.json` states the effective value every target must hav
 - the Workshop folders: only `.xml`, `.png` and the selection icons, lowercase unique names, no name that shadows a stock file, `strings.xml` names every class, 512x512 preview, CRLF copy-paste texts in English and Russian, base-game trucks only;
 - the engine-limits law (`tools/engine_limits.py`): no value above what the exe accepts, and the table matches the exe;
 - the zip law (`tools/zipcheck.py`): every package passes the PhysFS 2.0 rules; the stock archives and the Workshop items on this PC pass it too; a Zip64 zip fails it;
-- the Config.xml editor on a copy: the default is the safe set without opt-in mods and says so; `--help` and the output mark the crashing probes; no personal data in any tracked file, package or Workshop file;
+- the archive-name law (`tests/test_archive_names.py`): every package and probe name has at most 16 characters before `.zip` (the limit read back from the exe), only `a-z0-9_`, not only hex digits; the build refuses a longer name; the packages in `build\local` too; old `OpenTrail_*` lines are still removed;
+- the Config.xml editor on a copy: the default is the safe set without opt-in mods and says so; `--help` and the output mark the probes that replace a stock truck file; no personal data in any tracked file, package or Workshop file;
 - parser laws over generated XML (hypothesis, 400 examples; `HYPOTHESIS_PROFILE=thorough` for 4000).
 
-`tools/mutation_check.py` breaks the product in 34 places in a temp copy (wrong values, wrong lock byte, LF instead of CRLF, a planted e-mail, broken inheritance merge, a truck mod that writes stock truck files with the build's guard switched off, copies named like the stock trucks, names missing in a language, the crash warning gone from `--help`, ...) and checks that the named test fails each time.
+`tools/mutation_check.py` breaks the product in 38 places in a temp copy (wrong values, wrong lock byte, LF instead of CRLF, a planted e-mail, broken inheritance merge, a truck mod that writes stock truck files with the build's guard switched off, copies named like the stock trucks, names missing in a language, the probe warning gone from `--help`, a 23-character package name with the build's name check switched off, a wrong name limit, ...) and checks that the named test fails each time.
 
 ## Files
 

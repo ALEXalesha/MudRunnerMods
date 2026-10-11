@@ -75,6 +75,20 @@ stock files in `Media.zip` and the DLC archives.
 - The preview can only be changed by publishing again (source 2).
 - Unpublished mods can be tested in the Proving Ground (source 1).
 
+### The package-name crash (11.10)
+
+- All in-game crashes 03.10 to 10.10: WER `BEX64`, `MSVCR110.dll` 11.0.61135.400
+  offset `0x6d5ff` (`_invoke_watson`), `c0000409`, fast fail 5. Full dumps in
+  `%LOCALAPPDATA%\CrashDumps`. Stack: `strncpy_s` <- `MudRunner.exe+0x7ef718`.
+- `MudRunner.exe` 0.6.8 at RVA 0x7ef600: builds `levels/<n>.stg` or
+  `classes/trucks/<n>.xml`, `PHYSFS_getRealDir` (exported at 0x81a7b0),
+  `strrchr('.')`, `strrchr('/')`, `_stricmp(ext, ".zip")`, then
+  `strncpy_s(rsp+0x28, 0x11, slash+1, dot-slash-1)`; then loops over the loaded
+  Workshop items, formats each id with `"%llx"` and compares. So the archive name
+  (without `.zip`) is the "mod id" of a truck or level and has room for 16
+  characters. Workshop zips: 8 hex characters. `tools/engine_limits.py`
+  `read_exe_archive_name_max` finds `lea edx,[rax+0x11]` after the `.zip` compare.
+
 ### Truck names for local packages (10.10)
 
 - The exe reads `<ModStrings>` from `%llx.xml`, the Workshop item id, next to

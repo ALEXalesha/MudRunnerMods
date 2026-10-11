@@ -1,6 +1,7 @@
 {
   "id": "hyper_power",
   "title": "Hyper Power",
+  "package": "opentrail_hyper",
   "version": "1.0.0",
   "workshop_prefix": "oth",
   "workshop_suffix": "Hyper",

@@ -115,8 +115,31 @@ def load_replaces():
     return load_order_file().get("replaces", {})
 
 
+CUSTOM_ZIP = "opentrail_custom.zip"
+
+
 def zip_name(spec):
-    return "%s_%s.zip" % (FAMILY, spec["title"].replace(" & ", "_and_").replace(" ", "_"))
+    """The package file name: mod.json "package" + .zip, at most 16 characters before
+    ".zip" (engine_limits.ARCHIVE_NAME_MAX: a longer name crashes the game the moment
+    it looks at a truck or level from the package). Until 10.10 the packages were
+    named OpenTrail_<Title>.zip, 19 to 27 characters: that was the crash."""
+    return spec["package"] + ".zip"
+
+
+def archive_name_problem(path):
+    """Why the game cannot mount this zip name, or None."""
+    stem = os.path.basename(path)
+    if not stem.lower().endswith(".zip"):
+        return "%s is not a .zip" % stem
+    stem = stem[:-4]
+    if len(stem) > engine_limits.ARCHIVE_NAME_MAX:
+        return "%s has %d characters before .zip, the game copies at most %d (strncpy_s crash)" % (
+            os.path.basename(path), len(stem), engine_limits.ARCHIVE_NAME_MAX)
+    if not re.fullmatch(r"[a-z0-9_]+", stem):
+        return "%s: only a-z, 0-9 and _ in package names" % os.path.basename(path)
+    if re.fullmatch(r"[0-9a-f]+", stem):
+        return "%s looks like a Workshop item id (hex)" % os.path.basename(path)
+    return None
 
 
 # --------------------------------------------------------------------------- targets
@@ -535,7 +558,7 @@ def build_all(game_dir, out_dir=None, only=None, skip_levels=False, verbose=True
         levels = sorted(set(l for n in names for l in plans[n][2]))
         _levels(b, fs, levels, skip_levels)
         if out_dir:
-            b.zip_path = os.path.join(out_dir, "%s_Custom.zip" % FAMILY)
+            b.zip_path = os.path.join(out_dir, CUSTOM_ZIP)
             write_package(b, fs, b.zip_path)
         return {"custom": b}
 
@@ -646,7 +669,11 @@ def write_package(b, fs, out_path, skip_levels=False):
     the central directory (tools/zipcheck.py). Level files are streamed, so the entry
     size is given up front: then Python writes a plain 2.0 header and patches the real
     sizes into it after the data. (1.0.0 used force_zip64=True here, which wrote
-    Zip64 local headers and made the six level files unreadable in game.)"""
+    Zip64 local headers and made the six level files unreadable in game.)
+    The file name itself must pass archive_name_problem (at most 16 characters)."""
+    bad_name = archive_name_problem(out_path)
+    if bad_name:
+        raise BuildError(bad_name)
     tmp = out_path + ".part"
     with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as z:
         for path in sorted(b.files):

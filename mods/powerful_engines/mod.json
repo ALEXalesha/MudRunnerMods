@@ -1,6 +1,7 @@
 {
   "id": "powerful_engines",
   "title": "Powerful Engines",
+  "package": "opentrail_power",
   "version": "1.0.0",
   "workshop_prefix": "otp",
   "workshop_suffix": "Powerful",

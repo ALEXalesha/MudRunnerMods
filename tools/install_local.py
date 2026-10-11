@@ -7,8 +7,12 @@
   python tools/install_local.py --remove --apply     # take all OpenTrail lines out
   python tools/install_local.py --probe names --apply     # only new strings files (names of new trucks)
   python tools/install_local.py --probe wheel --apply     # one stock wheel file, byte-identical
-  python tools/install_local.py --probe truck --apply     # DELIBERATELY CRASHES THE GAME, diagnosis only
-  (--probe identical and --probe changed also hold a stock truck file: they crash too)
+  python tools/install_local.py --probe truck --apply     # REPLACES A STOCK TRUCK FILE: diagnosis only
+  (--probe identical and --probe changed also hold a stock truck file)
+
+Package names are at most 16 characters before .zip (engine_limits.ARCHIVE_NAME_MAX):
+the game copies the name of the archive a truck or level comes from into a 17 byte
+buffer, and a longer name ends the game (every crash of the tests 03.10 to 10.10).
 
 The safe set is every mod except those listed under "opt_in" in mods/order.json
 (Unlocked Trucks: it replaces whole level files). The script prints exactly
@@ -39,7 +43,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import build_mods  # noqa: E402
 
 DEFAULT_CONFIG = os.path.join(os.environ.get("APPDATA", ""), "SpinTires MudRunner", "Config.xml")
-MARK = "OpenTrail_"
+MARKS = ("opentrail_", "otprobe_")      # also matches the old OpenTrail_<Title>.zip lines
 LINE_RE = re.compile(r'^[ \t]*<MediaPath\b[^>]*Path="([^"]*)"[^>]*/>[ \t]*\r?\n?', re.M)
 
 
@@ -98,7 +102,7 @@ def _split_keep(text):
 
 def _is_ours(line):
     m = LINE_RE.match(line)
-    return bool(m) and MARK in os.path.basename(m.group(1).replace("\\", "/"))
+    return bool(m) and os.path.basename(m.group(1).replace("\\", "/")).lower().startswith(MARKS)
 
 
 def game_running():
@@ -126,7 +130,7 @@ def main():
                          "file, overrides nothing; names = only new strings files (how the truck mods name "
                          "their new trucks), overrides nothing; plant / wheel = one stock file byte for byte; "
                          "truck = uaz469.xml byte for byte. truck, identical and changed replace a stock truck "
-                         "file: they DELIBERATELY CRASH THE GAME (truck menu), only for diagnosis")
+                         "file: diagnosis only, the game may crash (with the old long names they always did)")
     ap.add_argument("--remove", action="store_true")
     ap.add_argument("--apply", action="store_true")
     a = ap.parse_args()
@@ -134,7 +138,9 @@ def main():
         raise SystemExit("Config.xml not found: %s (start the game once)" % a.config)
     mods = None
     if a.probe:
-        zname = "OpenTrail_Probe_%s.zip" % a.probe.capitalize()
+        import build_probe
+        zname = build_probe.PROBE_ZIP if a.probe == "identical" else (
+            build_probe.CHANGED_ZIP if a.probe == "changed" else build_probe.sub_zip_name(a.probe))
         probe = os.path.abspath(os.path.join(a.local, zname))
         if not os.path.isfile(probe):
             raise SystemExit("probe not built: run tools/build_probe.py first")
@@ -144,8 +150,8 @@ def main():
                 "wheel": "kamaz_offroad.xml, byte-identical", "truck": "uaz469.xml, byte-identical"}[a.probe]
         print("Installing the probe only (%s): %s" % (what, probe))
         if a.probe in ("truck", "identical", "changed"):
-            print("WARNING: this probe replaces a stock truck file and DELIBERATELY CRASHES THE GAME at the "
-                  "truck menu. Only for diagnosis. Undo: install_local.py --remove --apply")
+            print("WARNING: this probe REPLACES A STOCK TRUCK FILE: diagnosis only, the game may crash. "
+                  "Undo: install_local.py --remove --apply")
         packages = [probe]
         mods = []
     elif not a.remove:
