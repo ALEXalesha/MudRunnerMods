@@ -27,7 +27,8 @@ def check_truck(test, mod, name, s, p):
     """Assert the effective result of `mod` on drivable truck `name` (s = stock root, p = patched)."""
     where = "%s %s" % (mod, name)
     if mod == "infinite_fuel":
-        test.assertEqual(p.find("TruckData")[0].get("FuelCapacity"), "64000", where)
+        so = float(s.find("TruckData")[0].get("FuelCapacity"))
+        test.assertEqual(float(p.find("TruckData")[0].get("FuelCapacity")), min(so * 4, 64000), where)
     elif mod == "no_damage":
         dm = p.find("TruckData/Damage")
         test.assertTrue(dm, where)

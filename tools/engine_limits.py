@@ -176,3 +176,49 @@ def read_exe_archive_name_max(exe_path):
         if m:
             return m.group(1)[0] - 1
     return None
+
+
+# --------------------------------------------------------------------------- fuel fill thresholds
+
+# Infinite Fuel 1.0.0 (FuelCapacity 64000) made trucks jerk and not move (11.10). The
+# exe works with the FILL = fuel litres / FuelCapacity (the float at truck+0x3ec, the
+# litres at +0x3e8):
+#   0x1409224a5  fill < 0.06: every tick, with chance 1 - fill/0.06 (rand()/32767), the
+#                engine power is cut - the "last litres" cough. At fill ~0 it is cut
+#                almost every tick: the truck jerks and does not move.
+#   0x1407b3e73  fill < 0.2: the red low-fuel warning.
+# Fuel is set in LITRES by SetFuel (0x1408cbde0, clamps to 0..capacity) for a truck
+# restored from the profile or a save (0x1408a3b2b desc.fFuel, 0x1408a3b74 start-slot
+# truck) and by a fuel station (0x140791543, + litres per step). Only the parked trucks
+# of a level file get a percentage (0x14070b064: clamp(fFuel/100) * capacity).
+# So with 64000 l a truck brought in with its stock 80-800 l had a fill of at most
+# 800/64000 = 1.25 % - deep in the cough zone, and a fuel station needs 3840 l to get out.
+# The law: a truck that arrives with a full STOCK tank must stay above both thresholds,
+# so the new capacity is at most stock / 0.25 (fill 25 % > 20 % > 6 %).
+FUEL_COUGH_FILL = 0.06
+FUEL_WARN_FILL = 0.2
+FUEL_TANK_MAX_SCALE = 4
+
+
+def read_exe_fuel_fills(exe_path):
+    """The fill thresholds the exe compares fuel/FuelCapacity with: sorted constants of
+    `divss xmmA, [rax+CAP]` + `movss xmmB, [rip+const]`, CAP read from the FuelCapacity
+    reader (`movss [rax+CAP], xmm0` after the clamp)."""
+    pe = _Pe(exe_path)
+    cap = None
+    for i in pe.lea_refs(pe.string_vas(b"FuelCapacity")):
+        k = pe.code.find(b"\xf3\x0f\x11\x80", i, i + 0x100)
+        if k >= 0:
+            cap = struct.unpack_from("<I", pe.code, k + 4)[0]
+    if cap is None:
+        return None
+    out = set()
+    pat = rb"\xf3[\x44]?\x0f\x5e[\x80\x88\x90\x98\xa0\xa8\xb0\xb8]" + re.escape(struct.pack("<I", cap))
+    for m in re.finditer(pat, pe.code):
+        j = m.end()
+        n = re.search(rb"\xf3[\x44]?\x0f\x10[\x05\x0d\x15\x1d\x25\x2d\x35\x3d]", pe.code[j:j + 0x10])
+        if n:
+            p = j + n.start()
+            prefix = pe.code[p:p + n.end() - n.start()]
+            out.add(round(pe.movss_const(p, prefix), 4))
+    return sorted(out)

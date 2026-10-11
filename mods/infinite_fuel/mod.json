@@ -1,24 +1,25 @@
 {
   "id": "infinite_fuel",
-  "title": "Infinite Fuel",
+  "title": "Big Fuel Tank",
   "package": "opentrail_fuel",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "workshop_prefix": "otf",
-  "workshop_suffix": "Infinite Fuel",
-  "suffix_ru": "Бесконечное топливо",
+  "workshop_suffix": "Big Tank",
+  "suffix_ru": "Большой бак",
   "ops": [
     {
       "kind": "trucks",
       "only": "drivable",
       "path": "TruckData",
       "attr": "FuelCapacity",
-      "set": "64000"
+      "scale": 4,
+      "max": 64000
     }
   ],
   "workshop": {
-    "short": "INFINITE\nFUEL",
-    "tag_en": "64 000 litre tank",
-    "tag_ru": "Бак на 64 000 литров",
+    "short": "BIG\nFUEL TANK",
+    "tag_en": "Fuel tank x4",
+    "tag_ru": "Бак x4",
     "bg": [
       20,
       70,
@@ -30,11 +31,13 @@
       120
     ],
     "en": [
-      "Every truck gets a 64,000 litre fuel tank (stock 40 to 800 litres; 64,000 is the most the game accepts). MudRunner has no fuel consumption setting in the truck files: consumption is computed in the game engine, so a huge tank is the only file-level way to never run dry.",
+      "Every truck gets a fuel tank 4 times bigger than stock (40-800 l become 160-3200 l): four times longer between fuel stations.",
+      "Why not bigger: the game coughs the engine when the tank is under 6 % full and shows the red warning under 20 %. A truck brought in from your save or profile keeps its fuel in litres, so with a huge tank a full stock tank is almost empty - the truck jerks and does not move (Infinite Fuel 1.0.0 with 64,000 l). With x4 a full stock tank is 25 %.",
       "Fuel stations still work; addon tanks and cisterns are not changed."
     ],
     "ru": [
-      "У каждого грузовика бак на 64 000 литров (в игре от 40 до 800; 64 000 - максимум, который принимает игра). В файлах грузовиков MudRunner нет настройки расхода топлива: расход считает движок игры, поэтому огромный бак - единственный способ на уровне файлов никогда не остаться без топлива.",
+      "У каждого грузовика бак в 4 раза больше обычного (40-800 л становятся 160-3200 л): заправляться в 4 раза реже.",
+      "Почему не больше: игра глушит мотор рывками, когда бак полон меньше чем на 6 %, и показывает красное предупреждение ниже 20 %. Грузовик из сохранения или профиля приносит топливо в литрах, и в огромном баке полный обычный бак - почти пусто: грузовик дёргается и не едет (так было в Infinite Fuel 1.0.0 с 64 000 л). С x4 полный обычный бак - это 25 %.",
       "Заправки работают как раньше, баки дополнений и цистерны не меняются."
     ]
   },

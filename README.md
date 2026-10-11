@@ -33,14 +33,14 @@ Ten ideas, nine mods. The fog of war cannot be removed with game files (see "Not
 | AWD and Diff Lock (`opentrail_awd.zip`) | Wheels with `Torque="none"` or no Torque get `full`; `DiffLockType="None"` becomes `Default` (switchable) | 10 trucks without AWD or a switchable diff lock |
 | Deep Fording (`opentrail_ford.zip`) | `Damage@SensationMin/Max` box moved 1 m above its old top (0.2 m tall) | 36 trucks |
 | No Damage (`opentrail_damage.zip`) | `Damage@Capacity` 64,000, the game's maximum (stock 160 to 1000) | 36 trucks |
-| Infinite Fuel (`opentrail_fuel.zip`) | `TruckData@FuelCapacity` 64,000 l, the game's maximum (stock 40 to 800) | 36 trucks |
+| Big Fuel Tank (`opentrail_fuel.zip`, id infinite_fuel) | `TruckData@FuelCapacity` x4 (stock 40-800 l become 160-3200 l) | 36 trucks |
 | Grippy Wheels (`opentrail_grip.zip`) | `WheelFriction@SubstanceFriction` x2.5, at least 2.5; `@BodyFriction` x1.5, at least 2.0 | 50 wheel types |
 | Winch Anchors (`opentrail_winch.zip`) | `GameData/WinchSocket` on 7 stumps and small trees that had none | 7 plant classes |
 | Unlocked Trucks (`opentrail_unlock.zip`, 295 MB) | `isLocked` cleared in the truck records of the level files | 24 trucks and trailers on 6 maps |
 
 ### Why some mods work the way they do
 
-**Infinite Fuel is a big tank, not zero consumption.** No truck file and no attribute name in the exe sets fuel consumption; the game computes it in code (the UI only prints `%d L / Min`). A 64,000 l tank is the closest thing a file can do: the exe clamps FuelCapacity at 64,000 (see "Engine limits"). At 20 l/min it lasts more than 50 hours of driving. Starting fuel on the maps is a percentage (the level files store `fFuel` as 0 to 100), so trucks start full. Addon tanks and cisterns are not changed.
+**Big Fuel Tank (was Infinite Fuel), and why not 64,000 l.** No file sets fuel consumption, so the mod makes the tank bigger. Infinite Fuel 1.0.0 used 64,000 l (the exe maximum) and trucks jerked and did not move (11.10). Cause, read in MudRunner.exe: the game works with the fill = litres / FuelCapacity; below 0.06 it cuts the engine at random every tick with chance 1 - fill/0.06 (0x1409224a5, the "last litres" cough), below 0.2 it shows the red warning (0x1407b3e73). A truck from the profile or a save brings its fuel in LITRES (SetFuel 0x1408cbde0 from desc.fFuel), and a fuel station adds litres; only the parked trucks of a level file get a percentage. So a full stock tank (at most 800 l) was 1.25 % of 64,000 - the cough zone. The law (tests/test_limits.py FuelFillLawTest, thresholds read from the exe): a full stock tank must be at least 25 % of the new one, so the tank is x4.
 
 **No Damage uses a huge capacity, not 0.** The game divides damage by `Capacity` (the damage factor in `truck.lua` and the `Damage: %d/%d` display). 0 would divide by zero, the ETS2 lesson where fuel consumption 0 gave `-nan` on the dashboard. With 64,000 (the exe's maximum, 64 times the toughest stock truck) a truck never gets near the point where damage costs power or steering (`truck.lua` starts the damage effects at a factor of 0.7).
 
@@ -123,7 +123,7 @@ Close the game before every command (the game rewrites Config.xml on exit). Each
 cd <repository>
 .venv\Scripts\python tools\install_local.py --mods infinite_fuel --apply
     THE KEY CHECK: the same package that crashed on 10.10, now named opentrail_fuel.zip.
-    Truck menu opens, "A-469 (Infinite Fuel)" is in the list, the tank shows 64000 l
+    Truck menu opens, "A-469 (Infinite Fuel)" is in the list, the tank is 4x stock (A-469: 320 l), the truck drives off without jerking
 .venv\Scripts\python tools\install_local.py --mods unlocked_trucks --apply
     "Single player" opens; new game on Flood or Coast: the trucks on the map are not locked
 .venv\Scripts\python tools\install_local.py --probe truck --apply

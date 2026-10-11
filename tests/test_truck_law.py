@@ -156,9 +156,9 @@ class NamesTest(unittest.TestCase):
         b = build_mods.build_all(common.GAME, None, only=["infinite_fuel", "no_damage"], skip_levels=True,
                                  verbose=False, fs=fs())["custom"]
         text = b.files["strings/en/opentrail_custom.txt"][2:].decode("utf-16-le")
-        self.assertIn("/otc_kamaz4310\r\nC-4310 (Infinite Fuel + No Damage)\r\n", text)
+        self.assertIn("/otc_kamaz4310\r\nC-4310 (Big Tank + No Damage)\r\n", text)
         ru = b.files["strings/ru/opentrail_custom.txt"][2:].decode("utf-16-le")
-        self.assertIn("(Бесконечное топливо + Без поломок)", ru)
+        self.assertIn("(Большой бак + Без поломок)", ru)
 
 
 if __name__ == "__main__":

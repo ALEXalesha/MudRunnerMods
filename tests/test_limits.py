@@ -83,3 +83,44 @@ class PackageLimitsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FuelFillLawTest(unittest.TestCase):
+    """Infinite Fuel 1.0.0 (64000 l) made trucks jerk and not move: the exe coughs the
+    engine when fuel litres / FuelCapacity < 0.06, and a truck from the profile or a
+    save brings its fuel in litres (at most 800 l = 1.25 % of 64000). The law: a full
+    STOCK tank must stay above the red warning (0.2) and the cough (0.06) in the new tank."""
+
+    def test_thresholds_order(self):
+        self.assertLess(engine_limits.FUEL_COUGH_FILL, engine_limits.FUEL_WARN_FILL)
+        self.assertGreater(1.0 / engine_limits.FUEL_TANK_MAX_SCALE, engine_limits.FUEL_WARN_FILL)
+
+    @unittest.skipUnless(os.path.isfile(EXE), "game not installed")
+    def test_thresholds_match_the_exe(self):
+        self.assertEqual(engine_limits.read_exe_fuel_fills(EXE),
+                         [engine_limits.FUEL_COUGH_FILL, engine_limits.FUEL_WARN_FILL])
+
+    @unittest.skipUnless(HAVE_GAME, "game not installed")
+    def test_full_stock_tank_is_not_near_empty(self):
+        """Every truck file any package ships: stock FuelCapacity / new >= 1/FUEL_TANK_MAX_SCALE."""
+        from common import resolver_with, stock, drivable_trucks
+        st = stock()
+        stock_cap = {n: float(st.resolve("trucks", n)[0].find("TruckData")[0].get("FuelCapacity"))
+                     for n in drivable_trucks()}
+        seen = 0
+        for name, b in built().items():
+            r = resolver_with(b.files)
+            for path in b.files:
+                if not (path.startswith("classes/trucks/") and path.endswith(".xml")):
+                    continue
+                cls = path[len("classes/trucks/"):-4]
+                base = cls.split("_", 1)[1] if cls.split("_", 1)[0] in ("otf", "otc", "otd", "otp", "oth", "ota",
+                                                                         "otw") else cls
+                if base not in stock_cap:
+                    continue
+                new = float(r.resolve("trucks", cls)[0].find("TruckData")[0].get("FuelCapacity"))
+                fill = stock_cap[base] / new
+                self.assertGreaterEqual(fill, 1.0 / engine_limits.FUEL_TANK_MAX_SCALE - 1e-9,
+                                        "%s %s: full stock tank is %.1f %% of the new one" % (name, cls, fill * 100))
+                seen += 1
+        self.assertGreater(seen, 30)
