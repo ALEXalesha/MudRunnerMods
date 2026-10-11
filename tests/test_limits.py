@@ -124,3 +124,14 @@ class FuelFillLawTest(unittest.TestCase):
                                         "%s %s: full stock tank is %.1f %% of the new one" % (name, cls, fill * 100))
                 seen += 1
         self.assertGreater(seen, 30)
+
+
+class GarageRulesTest(unittest.TestCase):
+    """The garage lock is code + game state, not a file (see engine_limits, 11.10):
+    a garage needs GARAGE_NEED points, a new game gives them only to garages within
+    GARAGE_START_RADIUS of the drive truck."""
+
+    @unittest.skipUnless(os.path.isfile(EXE), "game not installed")
+    def test_garage_rules_match_the_exe(self):
+        self.assertEqual(engine_limits.read_exe_garage_rules(EXE),
+                         (engine_limits.GARAGE_NEED, engine_limits.GARAGE_START_RADIUS))

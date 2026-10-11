@@ -417,7 +417,7 @@ def read_stg_trucks(head):
     u32 numTrucks, then per truck: u16 len + type name (zero terminated), 4x4 float
     matrix, u32 numAddons + names, u16 len + trailer name, f32 damage, f32 fuel
     (percent), u8 isLocked. Returns (records, end offset); a record is
-    dict(type, trailer, addons, damage, fuel, locked, locked_at).
+    dict(type, trailer, addons, damage, fuel, locked, locked_at, x, z).
     """
     def rd_str(o):
         n = struct.unpack_from("<H", head, o)[0]
@@ -439,6 +439,7 @@ def read_stg_trucks(head):
     recs = []
     for _ in range(count):
         typ, o = rd_str(o)
+        tm = struct.unpack_from("<16f", head, o)      # truckData.tmTruck, row 3 = position
         o += 64
         na = struct.unpack_from("<I", head, o)[0]
         o += 4
@@ -455,12 +456,68 @@ def read_stg_trucks(head):
         if locked not in (0, 1):
             raise BuildError("isLocked byte is %d at %d" % (locked, o))
         recs.append(dict(type=typ, trailer=trailer, addons=adds, damage=dmg, fuel=fuel,
-                         locked=locked, locked_at=o))
+                         locked=locked, locked_at=o, x=tm[12], z=tm[14]))
         o += 1
     return recs, o
 
 
 STG_HEAD = 65536
+
+# Locators after the truck list (TerrainSTGSave.cpp in the exe writes, in this order:
+# gameData.nDriveTruck, numLocators, then per locator p->eType, p->xzOrg, p->xzDir,
+# p->fWidth, p->fLength, p->strId and, only for eType 7..8, p->tmAttached).
+# eType 1 is a garage (the save matches garage points to locators of type 1, and the
+# new-game code opens the type-1 garages near the drive truck), 7/8 carry a matrix.
+GARAGE_LOCATOR = 1
+ATTACHED_LOCATORS = (7, 8)
+
+
+def read_stg_locators(head, o):
+    """Parse what follows the truck list (o = its end): nDriveTruck, the locators and
+    the map frame written right after them (blocks sizeXZ, minXZ, strMutator).
+    Returns dict(drive, locators=[dict(type, x, z, width, length, id)], size, min,
+    mutator, end). There is no lock flag here: garage locks are game state
+    (engine_limits.GARAGE_NEED)."""
+    drive, n = struct.unpack_from("<II", head, o)
+    o += 8
+    if n > 256:
+        raise BuildError("implausible locator count %d" % n)
+    locs = []
+    for _ in range(n):
+        typ, x, z, _dx, _dz, w, ln, slen = struct.unpack_from("<I6fH", head, o)
+        if typ > 8:
+            raise BuildError("unknown locator type %d at %d" % (typ, o))
+        o += 30
+        if slen == 0 or head[o + slen - 1] != 0:
+            raise BuildError("locator id at %d is not zero terminated" % o)
+        sid = head[o:o + slen - 1].decode("ascii")
+        o += slen
+        if typ in ATTACHED_LOCATORS:
+            o += 64
+        locs.append(dict(type=typ, x=x, z=z, width=w, length=ln, id=sid))
+    sx, sz, mx, mz, mlen = struct.unpack_from("<4fH", head, o)
+    o += 18
+    mut = head[o:o + mlen - 1].decode("ascii")
+    o += mlen
+    return dict(drive=drive, locators=locs, size=(sx, sz), min=(mx, mz), mutator=mut, end=o)
+
+
+def stg_garages(head):
+    """Garages of a level and whether a new game opens them: [(x, z, open_at_start)].
+    The exe gives a garage its full points at a new game only when the drive truck
+    stands within engine_limits.GARAGE_START_RADIUS of it (0x14070bbff)."""
+    import math
+    recs, end = read_stg_trucks(head)
+    info = read_stg_locators(head, end)
+    drive = recs[info["drive"]] if info["drive"] < len(recs) else None
+    out = []
+    for loc in info["locators"]:
+        if loc["type"] != GARAGE_LOCATOR:
+            continue
+        near = drive is not None and math.hypot(drive["x"] - loc["x"], drive["z"] - loc["z"]) \
+            < engine_limits.GARAGE_START_RADIUS
+        out.append((loc["x"], loc["z"], near))
+    return out
 
 
 def unlock_stg_head(head):

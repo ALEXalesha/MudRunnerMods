@@ -372,6 +372,43 @@ class LevelsTest(unittest.TestCase):
             total += n
         self.assertEqual(total, 24)
 
+    def test_locators_of_every_level_parse(self):
+        """The locator list after the trucks (format from TerrainSTGSave.cpp) parses on
+        every level and is followed by the map frame: minXZ = -sizeXZ / 2."""
+        for path in fs().list("levels/", ".stg"):
+            with fs().open(path) as fh:
+                head = fh.read(build_mods.STG_HEAD)
+            recs, end = build_mods.read_stg_trucks(head)
+            info = build_mods.read_stg_locators(head, end)
+            self.assertLess(info["end"], build_mods.STG_HEAD, path)
+            self.assertLess(info["drive"], max(1, len(recs)), path)
+            self.assertEqual(info["min"], (-info["size"][0] / 2, -info["size"][1] / 2), path)
+            self.assertIn(info["mutator"], ("", "aut", "usa"), path)
+
+    def test_no_locked_truck_on_any_map_after_the_mod(self):
+        """The law per map (11.10): with Unlocked Trucks no level_* map keeps a locked truck,
+        and nothing after the trucks (drive truck, locators, garages) changes."""
+        b = built()["unlocked_trucks"]
+        maps = [p for p in fs().list("levels/", ".stg") if p.startswith("levels/level_")]
+        self.assertEqual(len(maps), 11)
+        for path in maps:
+            with fs().open(path) as fh:
+                head = fh.read(build_mods.STG_HEAD)
+            after = b.levels[path][0] if path in b.levels else head
+            recs, end = build_mods.read_stg_trucks(after)
+            self.assertEqual([r["type"] for r in recs if r["locked"]], [], path)
+            self.assertEqual(build_mods.read_stg_locators(after, end),
+                             build_mods.read_stg_locators(head, build_mods.read_stg_trucks(head)[1]), path)
+
+    def test_plains_lock_is_a_garage_not_a_truck(self):
+        """Plains ("Swamp" in the Russian game): all 3 trucks are free in the file; of its 2 garages a new
+        game opens only the one by the drive truck - the other needs garage points."""
+        with fs().open("levels/level_plains.stg") as fh:
+            head = fh.read(build_mods.STG_HEAD)
+        recs, _end = build_mods.read_stg_trucks(head)
+        self.assertEqual([r["locked"] for r in recs], [0, 0, 0])
+        self.assertEqual([g[2] for g in build_mods.stg_garages(head)], [True, False])
+
     def test_challenges_and_proving_ground_are_not_touched(self):
         b = built()["unlocked_trucks"]
         self.assertFalse([p for p in b.levels if "/chlg_" in p or "/game_" in p])

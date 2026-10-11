@@ -119,6 +119,15 @@ MUTATIONS = [
      "test_archive_names.py", "test_written_class_packages"),
     ("tools/install_local.py", ".lower().startswith(MARKS)", ".startswith(MARKS)",
      "test_archive_names.py", "test_old_long_names_are_still_removed"),
+    # level locators and garages (11.10): the format after the trucks, the per-map law, the exe rules
+    ("tools/build_mods.py", "        if typ in ATTACHED_LOCATORS:", "        if typ == 7:",
+     "test_mods.py", "test_locators_of_every_level_parse"),
+    ("tools/build_mods.py", '        if r["locked"]:', '        if r["locked"] and r["type"]:',
+     "test_mods.py", "test_no_locked_truck_on_any_map_after_the_mod"),
+    ("tools/engine_limits.py", "GARAGE_START_RADIUS = 64.0", "GARAGE_START_RADIUS = 100.0",
+     "test_limits.py", "test_garage_rules_match_the_exe"),
+    ("tools/build_mods.py", "            < engine_limits.GARAGE_START_RADIUS",
+     "            < 1000.0", "test_mods.py", "test_plains_lock_is_a_garage_not_a_truck"),
 ]
 
 

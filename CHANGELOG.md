@@ -13,7 +13,7 @@ Mods (public names "OpenTrail ..."):
 - **Big Fuel Tank** (id `infinite_fuel`, was Infinite Fuel): FuelCapacity x4. The first version set 64,000 l and trucks jerked without moving (11.10): the exe cuts the engine at random when litres / FuelCapacity < 0.06, and a truck from the profile or a save brings its fuel in litres (a full stock tank was at most 1.25 %). Law `FuelFillLawTest`, thresholds read from the exe.
 - **Grippy Wheels**: SubstanceFriction x2.5 (at least 2.5), BodyFriction x1.5 (at least 2.0) on 50 wheel types.
 - **Winch Anchors**: winch sockets on 7 stumps and small trees.
-- **Unlocked Trucks**: isLocked cleared for 24 trucks and trailers on 6 maps.
+- **Unlocked Trucks**: isLocked cleared for 24 trucks and trailers on 6 maps. Law per map (11.10): none of the 11 maps keeps a locked truck. The level head after the trucks is parsed (drive truck, locators, map frame). "Plains" has no locked truck; its second garage is locked by garage points, which are game state and exe code (4 points; free only within 64 m of the drive truck at a new game), so no file mod can open it. 4 new mutations (44, all caught).
 - Not possible as a file mod: fog of war (saves and profile only), winch length and force, fuel consumption.
 
 Fixed after the first in-game test (the game skipped the main menu and crashed on Esc): the Unlocked Trucks zip had Zip64 local headers that the game's PhysFS 2.0 rejects. Level files are now plain zip 2.0 entries; `tools/zipcheck.py` checks every package; `install_local.py` installs the safe set (without Unlocked Trucks) unless `--all` or `--mods` is given, and prints the list.

@@ -222,3 +222,47 @@ def read_exe_fuel_fills(exe_path):
             prefix = pe.code[p:p + n.end() - n.start()]
             out.add(round(pe.movss_const(p, prefix), 4))
     return sorted(out)
+
+
+# --------------------------------------------------------------------------- garages
+
+# The garage lock (found 11.10 for the "Plains" map, MudRunner.exe):
+#   A garage is a level locator with eType 1 (levels/*.stg, see build_mods.read_stg_locators).
+#   The .stg has NO lock flag for it. The lock is game state: garage points per garage
+#   (the save stores numGarages x {xzOrg, numGaragePoints}, GameSTSLoad.cpp,473-478).
+#   0x1406dc4d0  points a garage needs: 4, or 8 (multiplayer "hardcore" garages).
+#   0x1406ccb00  AddGaragePoints(garage, n): adds up to the need; at the need the garage opens.
+#   0x14070bbff  new game: every garage within GARAGE_START_RADIUS of the drive truck
+#                (nDriveTruck of the .stg) gets the full need - the start garage.
+#   0x1401270b3  the rest: unload cargo that carries garage points ("GaragePoints" in the
+#                truck/addon XML, "Carries %d garage points") at the garage.
+# So a file mod cannot open the other garages: the exe gives free points only by
+# distance to the one drive truck, and the need is code, not data.
+GARAGE_NEED = (4, 8)
+GARAGE_START_RADIUS = 64.0
+
+
+def read_exe_garage_rules(exe_path):
+    """(need points, start radius) read from MudRunner.exe, or None.
+
+    need: the function `cmp byte [rcx+0xf0], 0; mov eax, A; jne +5; mov eax, B;
+    add rsp, 0x28; ret` gives (B, A). radius: the float of `movss xmm1, [rip+x];
+    comiss xmm1, xmm0; jbe; call <that function>` (the new-game garage loop)."""
+    pe = _Pe(exe_path)
+    m = re.search(rb"\x80\xb9\xf0\x00\x00\x00\x00\xb8(.)\x00\x00\x00\x75\x05\xb8(.)\x00\x00\x00"
+                  rb"\x48\x83\xc4\x28\xc3", pe.code, re.S)
+    if not m:
+        return None
+    need = (m.group(2)[0], m.group(1)[0])
+    fn = pe.code.rfind(b"\x48\x83\xec\x28", 0, m.start())     # sub rsp, 0x28: its start
+    if fn < 0 or m.start() - fn > 0x40:
+        return None
+    radius = None
+    for k in re.finditer(rb"\xf3\x0f\x10\x0d....\x0f\x2f\xc8\x76.\xe8", pe.code, re.S):
+        call = k.end() - 1
+        target = call + 5 + struct.unpack_from("<i", pe.code, call + 1)[0]
+        if target == fn:
+            radius = pe.movss_const(k.start(), b"\xf3\x0f\x10\x0d")
+    if radius is None:
+        return None
+    return need, radius

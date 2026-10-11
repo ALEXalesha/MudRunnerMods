@@ -66,7 +66,7 @@ Ten ideas, nine mods. The fog of war cannot be removed with game files (see "Not
 
 **Winch Anchors, not a longer winch.** There is no winch length or force attribute in any file; the exe treats the cable as a Havok rope constraint. What a file can change is where a winch can hook on. All trucks and trailers already have anchor points in the base game; seven plants did not: `stump_b`, `small_tree_a` to `small_tree_d`, `fir_small_b`, `pine_small_b`. Small trees can still be uprooted when pulled hard.
 
-**Unlocked Trucks edits level files.** The exe's level loader reads, per truck placed on a map, a type name, a matrix, addons, a trailer, damage, fuel and an `isLocked` byte. The mod copies the six maps that have locked trucks (Coast, Flood, River, The Ridge, The Valley, Old-timers) and clears those bytes, nothing else (checked byte by byte). Challenges, the tutorial and the Proving Ground are left alone. It works for a new game or a restarted map; existing saves keep their own truck state.
+**Unlocked Trucks edits level files.** The exe's level loader reads, per truck placed on a map, a type name, a matrix, addons, a trailer, damage, fuel and an `isLocked` byte. The mod copies the six maps that have locked trucks (Coast, Flood, River, The Ridge, The Valley, Old-timers) and clears those bytes, nothing else (checked byte by byte). Challenges, the tutorial and the Proving Ground are left alone. It works for a new game or a restarted map; existing saves keep their own truck state. The rest of the level head is parsed too (format from `TerrainSTGSave.cpp` in the exe: `nDriveTruck`, then the locators `eType, xzOrg, xzDir, fWidth, fLength, strId` and a matrix for types 7-8, then the map frame); the law `test_no_locked_truck_on_any_map_after_the_mod` checks all 11 maps: no locked truck after the mod and nothing after the trucks changed. "Plains" has no locked truck in its file at all; what is locked there are garages (see below).
 
 ## Not possible as a normal mod
 
@@ -76,6 +76,7 @@ Ten ideas, nine mods. The fog of war cannot be removed with game files (see "Not
 | Longer and stronger winch | No attribute exists (see above) | Only an exe patch, which is out of scope |
 | Zero fuel consumption | Not in the files (see above) | The big tank |
 | Trucks unlocked for the start slots | Kept in the profile (`status.unlockedTrucks`) | Not touched; Unlocked Trucks covers the trucks on the maps |
+| All garages open ("Plains" and the other maps) | A garage is a level locator of type 1 with no lock flag. The lock is game state: a garage needs 4 garage points (8 for multiplayer hardcore), coded in the exe; a new game gives them only to garages within 64 m of the drive truck, the others open when cargo that carries garage points is unloaded there. Both numbers are read back from the exe in the tests (`engine_limits.read_exe_garage_rules`) | A save or profile tool (waiting for a yes); moving garage locators next to the start would change the map, so it is not built |
 
 ## The real cause of the crashes (11.10): package names longer than 16 characters
 
