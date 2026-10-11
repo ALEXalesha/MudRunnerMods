@@ -10,7 +10,7 @@ Mods (public names "OpenTrail ..."):
 - **AWD and Diff Lock**: wheels with Torque none or missing get full on 10 trucks; DiffLockType None becomes Default.
 - **Deep Fording**: the damage sensation box moved 1 m above its old top.
 - **No Damage**: Damage Capacity 64,000 (the exe's maximum).
-- **Infinite Fuel**: FuelCapacity 64,000 l, the exe's maximum (consumption is not in the files).
+- **Big Fuel Tank** (id `infinite_fuel`, was Infinite Fuel): FuelCapacity x4. The first version set 64,000 l and trucks jerked without moving (11.10): the exe cuts the engine at random when litres / FuelCapacity < 0.06, and a truck from the profile or a save brings its fuel in litres (a full stock tank was at most 1.25 %). Law `FuelFillLawTest`, thresholds read from the exe.
 - **Grippy Wheels**: SubstanceFriction x2.5 (at least 2.5), BodyFriction x1.5 (at least 2.0) on 50 wheel types.
 - **Winch Anchors**: winch sockets on 7 stumps and small trees.
 - **Unlocked Trucks**: isLocked cleared for 24 trucks and trailers on 6 maps.
