@@ -2,7 +2,7 @@
   "id": "unlocked_trucks",
   "title": "Unlocked Trucks",
   "title_ru": "Открытые грузовики на картах",
-  "tag_ru": "Запертые на картах грузовики открыты (новая игра)",
+  "tag_ru": "Запертые в файлах карт грузовики открыты (новая игра); случайные - утилитой",
   "package": "opentrail_unlock",
   "version": "1.0.0",
   "ops": [
@@ -15,12 +15,14 @@
   ],
   "about": {
     "en": [
-      "Trucks and trailers that wait locked on the maps are unlocked at the start of a new game: the isLocked flag of every truck record in the level files (levels/level_*.stg) is cleared.",
-      "Works for a new game or a restarted map; existing saves keep their own truck state. The trucks you may pick for the start slots are kept in the profile and are not changed."
+      "Trucks and trailers that the map files place locked are unlocked at the start of a new game: the isLocked flag of every truck record in the level files (levels/level_*.stg) is cleared. These are on Flood, River, Valley, Ridge and Old-timers.",
+      "Not covered: the random trucks a new game puts on the map (every map but Old-timers, up to 4, \"Drive closer to the truck to unlock it\"). They are not in the level files: the game picks and places them itself and starts them locked. Open them in the map save with \"Открыть карты MudRunner.bat\", item 3.",
+      "Works for a new game or a restarted map; existing saves keep their own truck state."
     ],
     "ru": [
-      "Грузовики и прицепы, которые стоят запертыми на картах, открыты с начала новой игры: в файлах уровней (levels/level_*.stg) у каждой записи грузовика снят флаг isLocked.",
-      "Действует для новой игры или перезапущенной карты; в старых сохранениях состояние грузовиков своё. Список грузовиков для стартовых слотов хранится в профиле и не меняется."
+      "Грузовики и прицепы, которые файлы карт ставят запертыми, открыты с начала новой игры: в файлах уровней (levels/level_*.stg) у каждой записи грузовика снят флаг isLocked. Такие есть на Наводнении, Реке, Долине, Хребте и Old-timers.",
+      "Не входит: случайные грузовики, которые игра сама ставит на карту в новой игре (на всех картах, кроме Old-timers, до 4 штук, «Приблизьтесь к грузовику, чтобы разблокировать его»). Их нет в файлах карт, игра выбирает и ставит их сама и всегда запертыми. Их открывает «Открыть карты MudRunner.bat», пункт 3 (в сохранении карты).",
+      "Действует для новой игры или перезапущенной карты; в старых сохранениях состояние грузовиков своё."
     ]
   }
 }

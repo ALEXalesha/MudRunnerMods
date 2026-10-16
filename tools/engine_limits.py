@@ -394,3 +394,66 @@ def read_exe_map_requirements(exe_path):
         j = block.find(b"\xc7\x47\x0c")
         out[name] = struct.unpack_from("<I", block, j + 3)[0] if j >= 0 else 0
     return out or None
+
+
+# --------------------------------------------------------------------------- random map trucks
+
+# The locked trucks a new game puts on the map (found 16.10 from the tester's own save
+# level_volcano.sts, MudRunner.exe): they are NOT in levels/*.stg. The new-game code
+# (0x14070a0a0) collects the level's locators of RANDOM_TRUCK_LOCATOR type (0x14070b7db),
+# picks RANDOM_TRUCKS_MAX of them at random (2 in one game mode) and calls 0x1406e38d0 for
+# each: a truck from RANDOM_TRUCK_POOL (a table in the code: first spot "kind 1", second
+# "kind 2", the rest "kind 0"; DLC Ridge and the US pool by DLC and level mutator), placed
+# on the ground by the exe (0x1406eaf20) with random fuel, damage and add-ons. That function
+# never calls UnlockTruck (0x1406cbcf0), so they start locked; the only unlock is driving
+# closer than TRUCK_UNLOCK_RADIUS (0x1406ce044, "game_item_unlocked", "game/success").
+# A level file cannot reach them: the isLocked byte of levels/*.stg belongs to the .stg
+# records only, and a record placed by the mod at a spot would need the ground height there
+# (a record carries a full matrix, the spot only x and z; the terrain heights of the level
+# file are not decoded: the 449x449 map at its end is off by about 1 m) and would turn the
+# random pick into always the same trucks. The save (*.sts) keeps an isUnlocked byte per
+# truck (tools/save_sts.py): that is what the unlock tool sets.
+RANDOM_TRUCK_LOCATOR = 6
+RANDOM_TRUCKS_MAX = 4
+RANDOM_TRUCK_POOL = ("zil131", "ural4320", "kraz255", "gaz66", "maz535", "maz538", "umz6a",
+                     "kirovets700", "ford_ltl9000", "chevrolet_bison_1978", "freightliner_fl120",
+                     "westernstar_6900xd", "ford_f150")
+TRUCK_UNLOCK_RADIUS = 12.0
+
+
+def read_exe_random_trucks(exe_path):
+    """dict(locator, max, pool, radius) read from MudRunner.exe, or None.
+
+    locator: the new-game locator loop `cmp eax, T; jne; lea rcx, [rbp+x]; jmp; cmp eax, 8`
+    (T collects the random truck spots, 8 another list); max: the `mov ebx, N` that follows
+    (the count in the normal mode; the other mode keeps 2 in r15d). pool: the longest run
+    of `lea rax, [rip+name]; mov [rbp+x], rax` pairs (the table the spawner 0x1406e38d0
+    builds on its stack). radius: the float of the `movss xmm1, [rip+x]; comiss xmm1, xmm0`
+    right before the "game_item_unlocked" message."""
+    pe = _Pe(exe_path)
+    m = re.search(rb"\x83\xf8(.)\x75.\x48\x8d\x4d.\xeb.\x83\xf8\x08", pe.code, re.S)
+    if not m:
+        return None
+    locator = m.group(1)[0]
+    k = re.search(rb"\x41\x8b\xdf\x75\x05\xbb(.)\x00\x00\x00", pe.code[m.end():m.end() + 0x60], re.S)
+    if not k:
+        return None
+    most = k.group(1)[0]
+    best = []
+    pat = re.compile(rb"(?:\x48\x8d\x05.{4}\x48\x89(?:\x45.|\x85.{4})){8,}", re.S)
+    for m in pat.finditer(pe.code):
+        names = []
+        for k in re.finditer(rb"\x48\x8d\x05(.{4})", m.group(0), re.S):
+            i = m.start() + k.start()
+            o = pe.off(pe.tva + i + 7 + struct.unpack_from("<i", pe.code, i + 3)[0])
+            names.append(pe.d[o:o + 40].split(b"\0")[0].decode("latin-1") if o is not None else "")
+        if len(names) > len(best) and all(re.match(r"^[a-z0-9_]+$", n) for n in names):
+            best = names
+    radius = None
+    for i in pe.lea_refs(pe.string_vas(b"game_item_unlocked")):
+        j = pe.code.rfind(b"\xf3\x0f\x10\x0d", max(0, i - 0x60), i)
+        if j >= 0 and pe.code[j + 8:j + 11] == b"\x0f\x2f\xc8":
+            radius = pe.movss_const(j, b"\xf3\x0f\x10\x0d")
+    if not best or radius is None:
+        return None
+    return dict(locator=locator, max=most, pool=tuple(best), radius=radius)
