@@ -17,7 +17,7 @@ Build the folders first:
 | 03_OpenTrail_AWD_and_Diff_Lock | OpenTrail AWD and Diff Lock | 5 trucks "(AWD)" |
 | 04_OpenTrail_Deep_Fording | OpenTrail Deep Fording | 20 trucks "(Deep Fording)" |
 | 05_OpenTrail_No_Damage | OpenTrail No Damage | 20 trucks "(No Damage)" |
-| 06_OpenTrail_Infinite_Fuel | OpenTrail Infinite Fuel | 20 trucks "(Infinite Fuel)" |
+| 06_OpenTrail_Big_Fuel_Tank | OpenTrail Big Fuel Tank | 20 trucks "(Big Tank)" |
 | 07_OpenTrail_Grippy_Wheels | OpenTrail Grippy Wheels | 24 wheel types and 20 trucks "(Grippy)" |
 
 Each folder:
