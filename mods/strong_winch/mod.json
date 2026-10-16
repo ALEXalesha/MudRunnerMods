@@ -1,6 +1,8 @@
 {
   "id": "strong_winch",
   "title": "Winch Anchors",
+  "title_ru": "Точки для лебёдки на пнях и деревцах",
+  "tag_ru": "Пни и деревца держат трос лебёдки",
   "package": "opentrail_winch",
   "version": "1.0.0",
   "ops": [

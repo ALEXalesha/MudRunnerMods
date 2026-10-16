@@ -1,8 +1,9 @@
 {
   "id": "hyper_power",
   "title": "Hyper Power",
+  "title_ru": "Гипермощь",
   "package": "opentrail_hyper",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "workshop_prefix": "oth",
   "workshop_suffix": "Hyper",
   "suffix_ru": "Гипермощь",
@@ -14,12 +15,28 @@
       "attr": "Torque",
       "scale": 10,
       "max": 1000000
+    },
+    {
+      "kind": "trucks",
+      "only": "drivable",
+      "path": "TruckData/Motor/Gear",
+      "attr": "AngVel",
+      "scale": 2,
+      "max": 32
+    },
+    {
+      "kind": "trucks",
+      "only": "drivable",
+      "path": "TruckData/Motor/HighGear",
+      "attr": "AngVel",
+      "scale": 2,
+      "max": 32
     }
   ],
   "workshop": {
     "short": "HYPER\nPOWER",
-    "tag_en": "Engine torque x10 (cap 1 000 000)",
-    "tag_ru": "Момент x10 (предел 1 000 000)",
+    "tag_en": "Torque x10, every gear x2 faster",
+    "tag_ru": "Момент x10, каждая передача x2 быстрее",
     "bg": [
       60,
       0,
@@ -31,12 +48,12 @@
       255
     ],
     "en": [
-      "Engine torque of every truck x10, but not above 1,000,000, the most the game accepts (so the heaviest trucks get about x4). For fun: wheels spin easily, trucks climb almost anything and can flip.",
-      "Replaces Powerful Engines (the torque is x10 of stock, not x25)."
+      "Engine torque of every truck x10, but not above 1,000,000, the most the game accepts (so the heaviest trucks get about x4), and every forward gear twice as fast (gear AngVel x2, at most 32). For fun: wheels spin easily, trucks climb almost anything, go fast in every gear and can flip.",
+      "Replaces Powerful Engines (the torque is x10 of stock, not x30)."
     ],
     "ru": [
-      "Крутящий момент двигателя каждого грузовика x10, но не больше 1 000 000 - больше игра не принимает (у самых тяжёлых грузовиков выходит около x4). Ради веселья: колёса легко буксуют, грузовики лезут почти куда угодно и могут перевернуться.",
-      "Заменяет Powerful Engines (момент x10 от обычного, а не x25)."
+      "Крутящий момент двигателя каждого грузовика x10, но не больше 1 000 000 - больше игра не принимает (у самых тяжёлых грузовиков выходит около x4), и каждая передача вперёд в 2 раза быстрее (AngVel передачи x2, не больше 32). Ради веселья: колёса легко буксуют, грузовики лезут почти куда угодно, быстро едут на каждой передаче и могут перевернуться.",
+      "Заменяет Powerful Engines (момент x10 от обычного, а не x30)."
     ]
   },
   "as_heirs": true

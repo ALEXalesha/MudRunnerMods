@@ -1,6 +1,7 @@
 {
   "id": "grippy_wheels",
   "title": "Grippy Wheels",
+  "title_ru": "Цепкие колёса",
   "package": "opentrail_grip",
   "version": "1.0.0",
   "workshop_prefix": "otg",

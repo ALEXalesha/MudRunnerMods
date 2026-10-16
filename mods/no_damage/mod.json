@@ -1,6 +1,7 @@
 {
   "id": "no_damage",
   "title": "No Damage",
+  "title_ru": "Без поломок",
   "package": "opentrail_damage",
   "version": "1.0.0",
   "workshop_prefix": "otd",

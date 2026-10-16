@@ -32,6 +32,11 @@ LIMITS = {
     ("Motor", "Torque"): (None, 1000000.0),
     ("WheelFriction", "SubstanceFriction"): (0.1, 10.0),
     ("WheelFriction", "BodyFriction"): (0.1, 10.0),
+    # gear speeds (TruckData/Motor reader 0x1408a07f5: one getter for ReverseGear, every
+    # Gear and HighGear, min 0.1 in xmm12, max 32.0 loaded into xmm6 before the loop)
+    ("Gear", "AngVel"): (0.1, 32.0),
+    ("HighGear", "AngVel"): (0.1, 32.0),
+    ("ReverseGear", "AngVel"): (0.1, 32.0),
 }
 
 
@@ -152,7 +157,86 @@ def read_exe_limits(exe_path):
             if lo is not None and hi is not None:
                 break
         out[("WheelFriction", attr)] = (None if lo is None else round(lo, 4), None if hi is None else round(hi, 4))
+    lo = hi = None
+    for i in pe.lea_refs(pe.string_vas(b"AngVel")):
+        hi = last_load(i, MOVSS_XMM6, 0xc0)
+        lo = last_load(i, MOVSS_XMM12, 0x800)
+        if hi is not None and lo is not None:
+            break
+    for tag in ("Gear", "HighGear", "ReverseGear"):
+        out[(tag, "AngVel")] = (None if lo is None else round(lo, 4), hi)
     return out
+
+
+MOVSS_XMM12 = b"\xf3\x44\x0f\x10\x25"
+
+
+# --------------------------------------------------------------------------- the gearbox
+
+# How the exe turns Motor Torque into wheel torque (the drivetrain update 0x140922270,
+# found 16.10 for "Powerful Engines works only in 5th gear"):
+#   0x1409223cf  torque of a forward Gear = Torque / powf(max(AngVel * 0.5, 1.0), 0.5),
+#                so 1st gear (small AngVel) gets the most torque;
+#   0x14092239e  HighGear: Torque * 1.25;
+#   0x140922e9e  the torque is then multiplied by a curve of the driven wheels' angular
+#                speed w: smoothstep up from AngVel*0.25-2 to AngVel (HighGear 0.35),
+#                1 at w = AngVel, smoothstep DOWN to 0 at 2*AngVel+5 (HighGear AngVel+2).
+# So every gear has a hard speed band: above 2*AngVel+5 the engine gives nothing,
+# however big Torque is. Light trucks reach the band end of gears 1-4 with stock torque
+# already, so x2.5 torque alone changed nothing there; only in 5th gear (A-469 AngVel
+# 20, band end 45 rad/s) did stock torque run out first. A power mod has to raise the
+# gear speeds (AngVel) too, and the sqrt above means raising AngVel by k costs sqrt(k)
+# of gear torque, which the Torque factor pays back.
+GEAR_HALF = 0.5          # AngVel * 0.5 ...
+GEAR_FLOOR = 1.0         # ... at least 1.0 ...
+GEAR_POWER = 0.5         # ... to the power 0.5 divides Torque
+HIGH_GEAR_TORQUE = 1.25
+BAND_SCALE, BAND_ADD = 2.0, 5.0          # band end of a Gear: 2 * AngVel + 5
+HIGH_BAND_ADD = 2.0                      # band end of the HighGear: AngVel + 2
+
+
+def gear_torque(torque, angvel, high=False):
+    """The torque the exe gives a gear (before the speed curve)."""
+    if high:
+        return torque * HIGH_GEAR_TORQUE
+    return torque / max(angvel * GEAR_HALF, GEAR_FLOOR) ** GEAR_POWER
+
+
+def band_end(angvel, high=False):
+    """Wheel angular speed (rad/s) where the gear's torque reaches 0."""
+    return angvel + HIGH_BAND_ADD if high else BAND_SCALE * angvel + BAND_ADD
+
+
+def read_exe_gear_rules(exe_path):
+    """(half, floor, power, high torque, band scale, band add, high band add) read from the
+    drivetrain update, or None. Found by its instruction pattern: `movss xmm1, [half];
+    movss xmm14, [floor]; movss xmm7, [high torque]` right after the gear count, then
+    `mulss xmm0, xmm1; comiss xmm0, xmm14; ...; call powf` and for the band
+    `mulss xmm3, [scale]; addss xmm3, [add]`, `addss xmm0, [scale]` (high)."""
+    pe = _Pe(exe_path)
+    m = re.search(rb"\xf3\x0f\x10\x0d(....)\xf3\x44\x0f\x10\x35(....)\xf3\x0f\x10\x3d(....)", pe.code, re.S)
+    if not m:
+        return None
+    i = m.start()
+    half = pe.movss_const(i, b"\xf3\x0f\x10\x0d")
+    floor = pe.movss_const(i + 8, b"\xf3\x44\x0f\x10\x35")
+    high = pe.movss_const(i + 17, b"\xf3\x0f\x10\x3d")
+    seg = pe.code[i:i + 0x100]
+    # HighGear band: movaps xmm0, xmm11; addss xmm0, [c]
+    k = seg.find(b"\x41\x0f\x28\xc3\xf3\x0f\x58\x05")
+    # Gear band: movaps xmm3, xmm11; mulss xmm3, [c]; addss xmm3, [c]
+    j = seg.find(b"\x41\x0f\x28\xdb\xf3\x0f\x59\x1d")
+    if k < 0 or j < 0:
+        return None
+    hadd = pe.movss_const(i + k + 4, b"\xf3\x0f\x58\x05")
+    scale = pe.movss_const(i + j + 4, b"\xf3\x0f\x59\x1d")
+    add = pe.movss_const(i + j + 12, b"\xf3\x0f\x58\x1d")
+    # the exponent of powf is xmm1 itself, the same 0.5: `mulss xmm0, xmm1`, then the
+    # call with xmm1 untouched
+    if seg.find(b"\xf3\x0f\x59\xc1") < 0:
+        return None
+    power = half
+    return half, floor, power, high, scale, add, hadd
 
 
 # --------------------------------------------------------------------------- archive names

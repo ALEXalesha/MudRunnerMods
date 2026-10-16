@@ -63,9 +63,12 @@ class ConfigEditTest(unittest.TestCase):
         open(os.path.join(local, "otprobe_ident.zip"), "wb").close()
         for n in ("changed", "manifest", "names", "plant", "wheel", "truck"):
             open(os.path.join(local, "otprobe_%s.zip" % n), "wb").close()
+        custom = os.path.join(tmp, "custom")
+        os.makedirs(custom)
+        open(os.path.join(custom, install_local.build_mods.CUSTOM_ZIP), "wb").close()
         env = dict(os.environ, OPENTRAIL_NO_GAME_CHECK="1")    # the game may be open on this PC
         r = subprocess.run([sys.executable, os.path.join(common.ROOT, "tools", "install_local.py"),
-                            "--config", cfg, "--local", local] + list(args),
+                            "--config", cfg, "--local", local, "--custom-dir", custom] + list(args),
                            capture_output=True, text=True, timeout=120, env=env)
         text = open(cfg, encoding="utf-8").read()
         backups = [f for f in os.listdir(tmp) if f.startswith("Config.xml.opentrail-")]
@@ -110,6 +113,17 @@ class ConfigEditTest(unittest.TestCase):
             self.assertEqual("REPLACES A STOCK TRUCK FILE" in r4.stdout, n == "truck", n)
         r2, text2, _b = self.run_tool("--remove", "--apply")
         self.assertEqual(r2.returncode, 0, r2.stdout + r2.stderr)
+
+    def test_custom_set_alone_and_removable(self):
+        """tools/combine.py builds build/custom/opentrail_custom.zip; --custom installs it
+        alone (one line above Media.zip), --remove takes it out like every package."""
+        r, text, backup = self.run_tool("--custom", "--apply")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(backup, CONFIG)
+        self.assertEqual(text.count("opentrail_"), 1)
+        self.assertIn("opentrail_custom.zip", text)
+        self.assertLess(text.index("opentrail_custom.zip"), text.index('Path="Media.zip"'))
+        self.assertEqual(install_local.edit_config(text, []), CONFIG)
 
     def test_help_marks_the_crashing_probes(self):
         r = subprocess.run([sys.executable, os.path.join(common.ROOT, "tools", "install_local.py"), "--help"],

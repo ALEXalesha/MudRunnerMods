@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0 - 16.10, not released yet (waiting for the in-game test)
+
+After the 7th in-game test (11-16.10):
+- **Powerful Engines 1.1.0 and Hyper Power 1.1.0: felt in every gear.** "Only 5th gear gives more" had a cause in the exe's gearbox (0x140922270): a gear gets `Torque / sqrt(max(AngVel/2, 1))` (high gear `Torque x 1.25`) times a wheel-speed curve that reaches zero at `2 x AngVel + 5` rad/s (high gear `AngVel + 2`), so more torque alone cannot move a gear past its speed band. Now Powerful Engines is `Torque` x3 and forward/high gear `AngVel` x1.5, Hyper Power `Torque` x10 (cap 1,000,000) and `AngVel` x2; `AngVel` is capped at the exe's 32 (new rows in `engine_limits.LIMITS`, read from the exe). Law `test_power_mods_are_felt_in_every_gear` (per truck and gear, with the exe's formula: torque at least x2.4 / x2.9, band x1.5 / x2, reverse stock) and `GearRulesTest` (the formula's constants read from the exe).
+- **Big Fuel Tank "slow and heavy": not the mod.** The copy equals the stock truck except `FuelCapacity`; the exe adds fuel weight only through a `FuelMass` block (cisterns only). Law `BigTankMassTest`. Answer: the A-469 is a weak truck; use your own set with Powerful Engines.
+- **Unlocked Trucks "nothing changed": not reproduced by files.** The maps' lock bytes are cleared, the package is mounted first, the exe reads the byte (`TerrainSTGLoad.cpp,471`) and checks it when placing a new game's trucks (0x14070b705). The profile has its own `status.unlockedTrucks` list and `status.isAllGaragesUnlocked` (slots and garage), which no file mod changes: that is for the profile tool. Asked the tester which lock it was.
+- **Your own set: `Собрать свой мод.bat` + `tools/combine.py`.** Pick mods by number (Russian prompts), get ONE package `build/custom/opentrail_custom.zip` with one copy per truck "<truck> (Свой набор)" / "(Custom)", install with `install_local.py --custom --apply` (or right from the script), undo with `0` / `--remove`. Mods that change the same value (Powerful Engines and Hyper Power) are a question, not a silent overwrite (`build_mods.conflicts`, generic over all ops). Laws in `tests/test_combine.py` (sum of the parts on every truck, conflicts, names, package name). Custom trucks are now named "(Custom)" instead of "A + B".
+- `title_ru` in every `mod.json`. 10 new mutations (54).
+
 ## 1.0.0 - not released yet (waiting for the in-game test)
 
 First version, built from the files of MudRunner 0.6.8 with all four DLC.

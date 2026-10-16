@@ -116,6 +116,35 @@ def load_replaces():
 
 
 CUSTOM_ZIP = "opentrail_custom.zip"
+# the one combined copy of each truck in a custom package: "A-469 (Свой набор)"
+CUSTOM_SUFFIX = "Custom"
+CUSTOM_SUFFIX_RU = "Свой набор"
+
+
+def op_targets(op):
+    """What one op changes: a set of (kind, path, attribute) keys (levels and winch
+    sockets get their own keys). Two mods with a common key cannot be combined: the
+    second would silently overwrite the first."""
+    if "levels" in op:
+        return {("levels", "*", "isLocked")}
+    if "winch_socket" in op:
+        return {("plants", n, "WinchSocket") for n in op["names"]}
+    if "fording" in op:
+        return {(op["kind"], op["path"], "SensationMin"), (op["kind"], op["path"], "SensationMax")}
+    return {(op["kind"], op["path"], op["attr"])}
+
+
+def conflicts(names):
+    """[(mod a, mod b, "path attr")] for every pair of mods in `names` that change the
+    same attribute (Powerful Engines and Hyper Power: Motor Torque and gear AngVel)."""
+    keys = {n: set().union(*[op_targets(op) for op in load_spec(n)["ops"]]) for n in names}
+    out = []
+    for i, a in enumerate(names):
+        for b in names[i + 1:]:
+            common = sorted(keys[a] & keys[b])
+            if common:
+                out.append((a, b, ", ".join("%s %s" % (k[1], k[2]) for k in common)))
+    return out
 
 
 def zip_name(spec):
@@ -586,8 +615,10 @@ def build_all(game_dir, out_dir=None, only=None, skip_levels=False, verbose=True
             if n not in order:
                 raise BuildError("unknown mod %s" % n)
         names = [n for n in reversed(order) if n in only]
-        if "hyper_power" in names and "powerful_engines" in names:
-            raise BuildError("hyper_power and powerful_engines are alternatives: pick one")
+        clash = conflicts(names)
+        if clash:
+            a, b, what = clash[0]
+            raise BuildError("%s and %s both change %s: pick one (tools/combine.py asks)" % (a, b, what))
         p, touched = run(names)
         b = Built("custom", {"id": "custom", "title": "Custom", "version": load_spec(names[0])["version"]})
         files = set().union(*touched.values())
@@ -599,8 +630,7 @@ def build_all(game_dir, out_dir=None, only=None, skip_levels=False, verbose=True
         if chosen_heirs:
             specs = [load_spec(n) for n in chosen_heirs]
             combo = {"id": "custom", "workshop_prefix": "otc", "ops": [],
-                     "workshop_suffix": " + ".join(x["workshop_suffix"] for x in specs),
-                     "suffix_ru": " + ".join(x.get("suffix_ru") or x["workshop_suffix"] for x in specs)}
+                     "workshop_suffix": CUSTOM_SUFFIX, "suffix_ru": CUSTOM_SUFFIX_RU}
             for x in specs:
                 combo["ops"].extend(x["ops"])
             hf, hp = heir_package(combo, fs, stock, names)
@@ -615,6 +645,7 @@ def build_all(game_dir, out_dir=None, only=None, skip_levels=False, verbose=True
         levels = sorted(set(l for n in names for l in plans[n][2]))
         _levels(b, fs, levels, skip_levels)
         if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
             b.zip_path = os.path.join(out_dir, CUSTOM_ZIP)
             write_package(b, fs, b.zip_path)
         return {"custom": b}

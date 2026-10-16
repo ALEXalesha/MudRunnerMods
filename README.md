@@ -12,7 +12,7 @@ The repository holds no game files. `tools/build_mods.py` reads the class XML fr
 
 Ten ideas, nine mods. The fog of war cannot be removed with game files (see "Not possible").
 
-**The six truck mods add NEW trucks and never touch a stock truck file.** Each changed truck is a full copy of the stock one under its own name, `<prefix>_<stock name>` (for example `otf_kamaz4310`), with the stock selection icon and its own display name, "C-4310 (Infinite Fuel)" (in Russian "C-4310 (Бесконечное топливо)"). (Until 11.10 we thought the game refused stock truck files from an extra package; the crash dumps showed the real cause, a package name longer than 16 characters, see "The real cause of the crashes". Full copies stay: they leave the stock trucks and saves alone.) Pick the new trucks in the truck slots when you start a map, or spawn them in the Proving Ground; the trucks placed on the maps stay stock. Grippy Wheels, Winch Anchors and Unlocked Trucks replace stock wheel, plant and level files (wheels and plants were tested in game and work).
+**The six truck mods add NEW trucks and never touch a stock truck file.** Each changed truck is a full copy of the stock one under its own name, `<prefix>_<stock name>` (for example `otf_kamaz4310`), with the stock selection icon and its own display name, "C-4310 (Big Tank)" (in Russian "C-4310 (Большой бак)"). (Until 11.10 we thought the game refused stock truck files from an extra package; the crash dumps showed the real cause, a package name longer than 16 characters, see "The real cause of the crashes". Full copies stay: they leave the stock trucks and saves alone.) Pick the new trucks in the truck slots when you start a map, or spawn them in the Proving Ground; the trucks placed on the maps stay stock. Grippy Wheels, Winch Anchors and Unlocked Trucks replace stock wheel, plant and level files (wheels and plants were tested in game and work).
 
 | Mod | New trucks | Name in the game (English / Russian) |
 |---|---|---|
@@ -21,15 +21,15 @@ Ten ideas, nine mods. The fog of war cannot be removed with game files (see "Not
 | AWD and Diff Lock | `ota_<truck>`, 10 (the trucks that lack AWD or a switchable diff lock) | "B-130 (AWD)" / "B-130 (Полный привод)" |
 | Deep Fording | `otw_<truck>`, 36 | "C-4310 (Deep Fording)" / "C-4310 (Глубокий брод)" |
 | No Damage | `otd_<truck>`, 36 | "C-4310 (No Damage)" / "C-4310 (Без поломок)" |
-| Infinite Fuel | `otf_<truck>`, 36 | "C-4310 (Infinite Fuel)" / "C-4310 (Бесконечное топливо)" |
-| custom package (`build_mods.py --only`) | `otc_<truck>`: all chosen truck changes on one truck | "C-4310 (Infinite Fuel + No Damage)" |
+| Big Fuel Tank | `otf_<truck>`, 36 | "C-4310 (Big Tank)" / "C-4310 (Большой бак)" |
+| your own set (`Собрать свой мод.bat`, `tools/combine.py`) | `otc_<truck>`: all chosen truck changes on one truck | "C-4310 (Custom)" / "C-4310 (Свой набор)" |
 
 36 = every drivable truck, 20 of the base game and 16 of the DLC. Names: the game reads `<ModStrings>` only for Steam Workshop items (the exe opens `<item id>.xml`), so a local package carries a new strings file per language, `strings/<lang>/opentrail_<mod>.txt`, in the format of the game's own `assets.txt` (UTF-16, `/key` line, name line). The game lists `strings/<lang>/*.txt` itself (`china.txt` exists in two languages only and its name is not in the exe), so no stock strings file is replaced. If the game refuses such a file (`install_local.py --probe names` tells), `build_mods.py --no-names` builds the packages without names.
 
 | Mod (package) | What it changes | Covers |
 |---|---|---|
-| Hyper Power (`opentrail_hyper.zip`) | `Motor@Torque` x10, capped at 1,000,000 (the game's limit). For fun. Replaces Powerful Engines; opt-in | 36 drivable trucks, base + DLC |
-| Powerful Engines (`opentrail_power.zip`) | `Motor@Torque` x2.5 (stock 16,000 to 240,000) | 36 trucks |
+| Hyper Power (`opentrail_hyper.zip`) | `Motor@Torque` x10, capped at 1,000,000 (the game's limit), and `AngVel` of every forward gear x2 (at most 32). For fun. Replaces Powerful Engines; opt-in | 36 drivable trucks, base + DLC |
+| Powerful Engines (`opentrail_power.zip`) | `Motor@Torque` x3 (stock 16,000 to 240,000) and `AngVel` of every forward gear x1.5 (at most 32): stronger and faster in every gear | 36 trucks |
 | AWD and Diff Lock (`opentrail_awd.zip`) | Wheels with `Torque="none"` or no Torque get `full`; `DiffLockType="None"` becomes `Default` (switchable) | 10 trucks without AWD or a switchable diff lock |
 | Deep Fording (`opentrail_ford.zip`) | `Damage@SensationMin/Max` box moved 1 m above its old top (0.2 m tall) | 36 trucks |
 | No Damage (`opentrail_damage.zip`) | `Damage@Capacity` 64,000, the game's maximum (stock 160 to 1000) | 36 trucks |
@@ -39,6 +39,10 @@ Ten ideas, nine mods. The fog of war cannot be removed with game files (see "Not
 | Unlocked Trucks (`opentrail_unlock.zip`, 295 MB) | `isLocked` cleared in the truck records of the level files | 24 trucks and trailers on 6 maps |
 
 ### Why some mods work the way they do
+
+**Powerful Engines and Hyper Power: felt in every gear (16.10).** In-game test: "the real gain is only in 5th gear, below it as usual". Cause in the gearbox code of MudRunner.exe (0x140922270): a gear gets `Torque / sqrt(max(AngVel/2, 1))` (the high gear `Torque x 1.25`), times a curve of the driven wheels' speed that rises up to `AngVel` and falls to ZERO at `2 x AngVel + 5` rad/s (high gear `AngVel + 2`). Above that speed the gear gives nothing, however strong the engine. A light truck reaches that end in gears 1-4 with the stock engine already, so torque x2.5 alone changed nothing there; in 5th (A-469 AngVel 20, end 45 rad/s) stock torque ran out first, so the gain showed. Now the mods raise the speed of every forward gear and the high gear too: Powerful Engines `AngVel` x1.5 and `Torque` x3, Hyper Power `AngVel` x2 and `Torque` x10 (at most 1,000,000); `AngVel` at most 32, the exe limit (0x1408a07f5). The formula gives a faster gear a bit less torque; the torque factor pays it back. The law `test_power_mods_are_felt_in_every_gear` computes with the exe's formula per truck and gear: gear torque at least x2.4 (Hyper Power x2.9), band end x1.5 (x2), reverse stock; the formula's numbers are read from the exe (`test_gear_rules_match_the_exe`). The "small jerks" in low gears: the same function cuts torque when a wheel spins up too fast (probably by `MaxDeltaAngVel`); that part is not fully read and not changed.
+
+**The big tank does not make a truck heavier (16.10).** In-game test: "goes slowly and feels very heavy". By the files the copy `otf_<truck>` is the stock truck except `FuelCapacity` (A-469 mass 1600 kg, centre of mass, engine, wheels - compared for every copy). By the exe fuel adds weight only through a `<FuelMass><Body Mass=.../></FuelMass>` block (reader 0x1408c93b9, 'fuel mass body'), and only cisterns have one. The law `BigTankMassTest`: the copies have no FuelMass, stock mass and centre of mass. So the copy should not be slower than the stock A-469; the A-469 itself is weak (torque 40,000, a KamAZ 140,000). Stronger with a big tank: your own set "Big Fuel Tank + Powerful Engines" (below).
 
 **Big Fuel Tank (was Infinite Fuel), and why not 64,000 l.** No file sets fuel consumption, so the mod makes the tank bigger. Infinite Fuel 1.0.0 used 64,000 l (the exe maximum) and trucks jerked and did not move (11.10). Cause, read in MudRunner.exe: the game works with the fill = litres / FuelCapacity; below 0.06 it cuts the engine at random every tick with chance 1 - fill/0.06 (0x1409224a5, the "last litres" cough), below 0.2 it shows the red warning (0x1407b3e73). A truck from the profile or a save brings its fuel in LITRES (SetFuel 0x1408cbde0 from desc.fFuel), and a fuel station adds litres; only the parked trucks of a level file get a percentage. So a full stock tank (at most 800 l) was 1.25 % of 64,000 - the cough zone. The law (tests/test_limits.py FuelFillLawTest, thresholds read from the exe): a full stock tank must be at least 25 % of the new one, so the tank is x4.
 
@@ -68,6 +72,8 @@ Ten ideas, nine mods. The fog of war cannot be removed with game files (see "Not
 
 **Unlocked Trucks edits level files.** The exe's level loader reads, per truck placed on a map, a type name, a matrix, addons, a trailer, damage, fuel and an `isLocked` byte. The mod copies the six maps that have locked trucks (Coast, Flood, River, The Ridge, The Valley, Old-timers) and clears those bytes, nothing else (checked byte by byte). Challenges, the tutorial and the Proving Ground are left alone. It works for a new game or a restarted map; existing saves keep their own truck state. The rest of the level head is parsed too (format from `TerrainSTGSave.cpp` in the exe: `nDriveTruck`, then the locators `eType, xzOrg, xzDir, fWidth, fLength, strId` and a matrix for types 7-8, then the map frame); the law `test_no_locked_truck_on_any_map_after_the_mod` checks all 11 maps: no locked truck after the mod and nothing after the trucks changed. "Plains" has no locked truck in its file at all; what is locked there are garages (see below).
 
+The 16.10 test: "nothing changed" on River, The Ridge, The Valley and Old-timers. What is certain: the files of these maps lock River - A-968m and C-65115, Ridge - a trailer, Valley - D-6317 and two trailers, Old-timers - 13 records; the mod clears them (law on every map), the package is mounted above `Media.zip` and the DLC archives, and the exe reads that byte (`TerrainSTGLoad.cpp,471`, record field +0xa0) and checks it when it places the trucks of a new game (0x14070b705). What a file does not change: the profile keeps its own list of unlocked trucks (`status.unlockedTrucks`, "Cant read chunk &status.unlockedTrucks[0]" in the exe) and a flag `status.isAllGaragesUnlocked`. Which trucks can be picked for the slots and which are open in the garage is the profile, not the map; no file mod opens it, that is a job for the profile tool (waiting for a yes). Open question for the tester: was it the lock of a truck standing on the map ("Approach the truck to unlock it") or the lock in the truck list of the slots / garage.
+
 ## Not possible as a normal mod
 
 | Idea | Why | Options |
@@ -89,6 +95,14 @@ That explains every result: all packages with trucks or levels crashed, whatever
 The fix: package names of at most 16 characters before `.zip`, lowercase letters, digits and `_`, never only hex digits (that could look like a Workshop id): `opentrail_fuel.zip`, `opentrail_damage.zip`, ... and the probes `otprobe_<name>.zip`. `tools/engine_limits.py` holds the limit (`ARCHIVE_NAME_MAX = 16`) and reads it back from the exe; the build refuses a longer name; the law `tests/test_archive_names.py` checks every package name, also the files in `build\local`. `install_local.py` still removes the old `OpenTrail_*.zip` lines. **If you put the packages in Config.xml by hand, do not rename them.**
 
 Not explained: on 10.10 at 11:57 `--probe truck` (then named `OpenTrail_Probe_Truck.zip`, 21 characters) left no crash report, although it holds a truck file. And the 10.10 report "Infinite Fuel works": the Config.xml backups show that Infinite Fuel was not installed at all that day before 23:06 (the game then ran with the wheel probe only).
+
+## Your own set: several mods in one truck (16.10)
+
+Double-click **"Собрать свой мод.bat"** in the repository root (or run `.venv\Scripts\python tools\combine.py`). It asks in Russian for mod numbers (for example `6 2 5` - Big Fuel Tank, Powerful Engines, No Damage), builds ONE package `build\custom\opentrail_custom.zip` (16 characters, the most the game takes) and offers to install it (game closed, a Config.xml backup is written). In game every truck gets one copy "<truck> (Custom)", in Russian "(Свой набор)", with all chosen changes. Wheels, winch anchors and unlocked map trucks go in as in their own packages. Undo: start the bat again and choose `0` (or `install_local.py --remove --apply`).
+
+Without questions: `tools\combine.py --mods infinite_fuel,powerful_engines,no_damage --install`; `--list` lists the mods.
+
+Laws (`tests/test_combine.py`): the copy is the sum of the parts (every value a chosen mod changes holds exactly what that mod gives alone, the rest is stock); mods that change the same value are never silently stacked: Powerful Engines and Hyper Power both set the torque and the gear speeds, so the script asks which one to keep, and with `--mods` it stops and names both (`build_mods.conflicts`). No other mods overlap. Install your own set alone: `install_local.py --custom --apply` installs only it.
 
 ## Install (local packages)
 
@@ -124,7 +138,7 @@ Close the game before every command (the game rewrites Config.xml on exit). Each
 cd <repository>
 .venv\Scripts\python tools\install_local.py --mods infinite_fuel --apply
     THE KEY CHECK: the same package that crashed on 10.10, now named opentrail_fuel.zip.
-    Truck menu opens, "A-469 (Infinite Fuel)" is in the list, the tank is 4x stock (A-469: 320 l), the truck drives off without jerking
+    Truck menu opens, "A-469 (Big Tank)" is in the list, the tank is 4x stock (A-469: 320 l), the truck drives off without jerking
 .venv\Scripts\python tools\install_local.py --mods unlocked_trucks --apply
     "Single player" opens; new game on Flood or Coast: the trucks on the map are not locked
 .venv\Scripts\python tools\install_local.py --probe truck --apply
@@ -218,7 +232,7 @@ Every truck mod adds its own trucks, so no two packages ship the same file (a te
 .venv\Scripts\python tools\build_mods.py --only infinite_fuel,no_damage,grippy_wheels
 ```
 
-This writes `build\local\opentrail_custom.zip`: trucks `otc_<truck>` named "C-4310 (Infinite Fuel + No Damage)" plus the chosen wheel or plant changes. Hyper Power and Powerful Engines cannot go into one custom package.
+This writes `build\local\opentrail_custom.zip`: trucks `otc_<truck>` named "C-4310 (Custom)" plus the chosen wheel or plant changes. Hyper Power and Powerful Engines cannot go into one custom package. `tools/combine.py` does the same into `build\custom\` (see "Your own set").
 
 ## Steam Workshop
 

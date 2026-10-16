@@ -1,6 +1,8 @@
 {
   "id": "unlocked_trucks",
   "title": "Unlocked Trucks",
+  "title_ru": "Открытые грузовики на картах",
+  "tag_ru": "Запертые на картах грузовики открыты (новая игра)",
   "package": "opentrail_unlock",
   "version": "1.0.0",
   "ops": [

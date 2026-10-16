@@ -152,13 +152,15 @@ class NamesTest(unittest.TestCase):
         self.assertFalse([p for p in files if p.startswith("strings/")])
         self.assertTrue(truck_entries(files))
 
-    def test_custom_names_join_the_suffixes(self):
+    def test_custom_names_say_own_set(self):
+        """16.10: one copy per truck for your own set, "<truck> (Свой набор)" ("(Custom)"
+        in the other languages), whatever mods are in it (was "A + B" until 1.0.0)."""
         b = build_mods.build_all(common.GAME, None, only=["infinite_fuel", "no_damage"], skip_levels=True,
                                  verbose=False, fs=fs())["custom"]
         text = b.files["strings/en/opentrail_custom.txt"][2:].decode("utf-16-le")
-        self.assertIn("/otc_kamaz4310\r\nC-4310 (Big Tank + No Damage)\r\n", text)
+        self.assertIn("/otc_kamaz4310\r\nC-4310 (Custom)\r\n", text)
         ru = b.files["strings/ru/opentrail_custom.txt"][2:].decode("utf-16-le")
-        self.assertIn("(Большой бак + Без поломок)", ru)
+        self.assertIn("(Свой набор)", ru)
 
 
 if __name__ == "__main__":

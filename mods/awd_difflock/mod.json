@@ -1,6 +1,7 @@
 {
   "id": "awd_difflock",
   "title": "AWD and Diff Lock",
+  "title_ru": "Полный привод и блокировка",
   "package": "opentrail_awd",
   "version": "1.0.0",
   "workshop_prefix": "ota",

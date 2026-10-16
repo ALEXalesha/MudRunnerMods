@@ -5,6 +5,7 @@
   python tools/install_local.py --all --apply        # also the opt-in mods
   python tools/install_local.py --mods no_damage,infinite_fuel --apply
   python tools/install_local.py --remove --apply     # take all OpenTrail lines out
+  python tools/install_local.py --custom --apply     # only your own set (tools/combine.py, build/custom)
   python tools/install_local.py --probe names --apply     # only new strings files (names of new trucks)
   python tools/install_local.py --probe wheel --apply     # one stock wheel file, byte-identical
   python tools/install_local.py --probe truck --apply     # REPLACES A STOCK TRUCK FILE: diagnosis only
@@ -44,6 +45,7 @@ import build_mods  # noqa: E402
 
 DEFAULT_CONFIG = os.path.join(os.environ.get("APPDATA", ""), "SpinTires MudRunner", "Config.xml")
 MARKS = ("opentrail_", "otprobe_")      # also matches the old OpenTrail_<Title>.zip lines
+CUSTOM_DIR = os.path.join(build_mods.ROOT, "build", "custom")
 LINE_RE = re.compile(r'^[ \t]*<MediaPath\b[^>]*Path="([^"]*)"[^>]*/>[ \t]*\r?\n?', re.M)
 
 
@@ -131,13 +133,23 @@ def main():
                          "their new trucks), overrides nothing; plant / wheel = one stock file byte for byte; "
                          "truck = uaz469.xml byte for byte. truck, identical and changed replace a stock truck "
                          "file: diagnosis only, the game may crash (with the old long names they always did)")
+    ap.add_argument("--custom", action="store_true",
+                    help="install only your own set build/custom/%s (made by tools/combine.py)" % build_mods.CUSTOM_ZIP)
+    ap.add_argument("--custom-dir", default=CUSTOM_DIR, help=argparse.SUPPRESS)
     ap.add_argument("--remove", action="store_true")
     ap.add_argument("--apply", action="store_true")
     a = ap.parse_args()
     if not os.path.isfile(a.config):
         raise SystemExit("Config.xml not found: %s (start the game once)" % a.config)
     mods = None
-    if a.probe:
+    if a.custom:
+        custom = os.path.abspath(os.path.join(a.custom_dir, build_mods.CUSTOM_ZIP))
+        if not os.path.isfile(custom):
+            raise SystemExit("your own set is not built: run tools/combine.py first (%s)" % custom)
+        print("Installing your own set only: %s" % custom)
+        packages = [custom]
+        mods = []
+    elif a.probe:
         import build_probe
         zname = build_probe.PROBE_ZIP if a.probe == "identical" else (
             build_probe.CHANGED_ZIP if a.probe == "changed" else build_probe.sub_zip_name(a.probe))
@@ -159,9 +171,9 @@ def main():
         left = [n for n in build_mods.load_order() if n not in mods]
         print("Installing %d mods (top = highest priority): %s" % (len(mods), ", ".join(mods)))
         print("Not installed: %s" % (", ".join(left) or "-"))
-    if not a.probe:
+    if not a.probe and not a.custom:
         packages = [] if a.remove else packages_in_order(a.local, mods)
-    if not a.remove and not a.probe and len(packages) != len(mods):
+    if not a.remove and not a.probe and not a.custom and len(packages) != len(mods):
         raise SystemExit("not every package is built in %s: run tools/build_mods.py first" % a.local)
     with open(a.config, encoding="utf-8", newline="") as fh:
         old = fh.read()

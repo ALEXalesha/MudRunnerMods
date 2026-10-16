@@ -35,11 +35,15 @@ def check_truck(test, mod, name, s, p):
         for d in dm:
             test.assertEqual(d.get("Capacity"), "64000", where)
     elif mod in ("powerful_engines", "hyper_power"):
-        k = 2.5 if mod == "powerful_engines" else 10
+        k, g = (3, 1.5) if mod == "powerful_engines" else (10, 2)
         so = float(s.find("TruckData/Motor")[0].get("Torque"))
         pa = float(p.find("TruckData/Motor")[0].get("Torque"))
         want = so * k if mod == "powerful_engines" else min(so * k, 1000000.0)
         test.assertAlmostEqual(pa, want, delta=1.0, msg=where)
+        for sg, pg in zip(s.find("TruckData/Motor")[0].children, p.find("TruckData/Motor")[0].children):
+            sa, pv = float(sg.get("AngVel")), float(pg.get("AngVel"))
+            want = sa if sg.tag == "ReverseGear" else min(sa * g, 32.0)
+            test.assertAlmostEqual(pv, want, delta=1e-3, msg="%s %s" % (where, sg.tag))
     elif mod == "awd_difflock":
         wheels = p.find("Wheels/Wheel")
         test.assertTrue(wheels, where)
@@ -222,6 +226,37 @@ class BuiltModsTest(unittest.TestCase):
             so = float(stock().resolve("trucks", n)[0].find("TruckData/Motor")[0].get("Torque"))
             got = r.resolve("trucks", "oth_" + n)[0].find("TruckData/Motor")[0].get("Torque")
             self.assertAlmostEqual(float(got), min(so * 10, 1000000.0), delta=1.0, msg=n)
+
+    def test_power_mods_are_felt_in_every_gear(self):
+        """16.10, in-game test: Powerful Engines and Hyper Power "only add something in 5th gear".
+        The exe gives a gear Torque / sqrt(max(AngVel/2, 1)) (HighGear Torque*1.25) and
+        no torque at all above 2*AngVel+5 rad/s (HighGear AngVel+2): a speed band per
+        gear that more Torque does not move. The law, per truck and forward gear, the
+        way the exe computes it: the gear's torque at least x2.4 (x2.9 for Hyper Power)
+        AND its band end at least x1.5 (x2) higher, unless AngVel sits at the exe's
+        limit 32; the reverse gear stays stock."""
+        import engine_limits as el
+        for mod, prefix, tq, band in (("powerful_engines", "otp_", 2.4, 1.5), ("hyper_power", "oth_", 2.9, 2.0)):
+            r = resolver_with(built()[mod].files)
+            for n in drivable_trucks():
+                sm = stock().resolve("trucks", n)[0].find("TruckData/Motor")[0]
+                pm = r.resolve("trucks", prefix + n)[0].find("TruckData/Motor")[0]
+                st, pt = float(sm.get("Torque")), float(pm.get("Torque"))
+                for sg, pg in zip(sm.children, pm.children):
+                    where = "%s %s %s %s" % (mod, n, sg.tag, sg.get("AngVel"))
+                    sa, pa = float(sg.get("AngVel")), float(pg.get("AngVel"))
+                    if sg.tag == "ReverseGear":
+                        self.assertEqual(sa, pa, where)
+                        continue
+                    high = sg.tag == "HighGear"
+                    ratio = el.gear_torque(pt, pa, high) / el.gear_torque(st, sa, high)
+                    self.assertGreaterEqual(ratio, tq - 1e-6, where)
+                    if pa < 32.0:
+                        self.assertGreaterEqual(el.band_end(pa, high), band * el.band_end(sa, high) - band * 5.0,
+                                                where)
+                        self.assertAlmostEqual(pa, sa * band, delta=1e-3, msg=where)
+                    else:
+                        self.assertGreater(pa, sa, where)
 
     def test_custom_package_has_exactly_the_chosen_mods(self):
         b = build_mods.build_all(common.GAME, None, only=["infinite_fuel", "no_damage"], skip_levels=True,

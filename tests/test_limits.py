@@ -135,3 +135,61 @@ class GarageRulesTest(unittest.TestCase):
     def test_garage_rules_match_the_exe(self):
         self.assertEqual(engine_limits.read_exe_garage_rules(EXE),
                          (engine_limits.GARAGE_NEED, engine_limits.GARAGE_START_RADIUS))
+
+
+class GearRulesTest(unittest.TestCase):
+    """How the exe splits Motor Torque over the gears (engine_limits, 16.10): the power
+    law test_power_mods_are_felt_in_every_gear computes with these numbers, so they are
+    read back from the drivetrain code of the installed exe."""
+
+    @unittest.skipUnless(os.path.isfile(EXE), "game not installed")
+    def test_gear_rules_match_the_exe(self):
+        el = engine_limits
+        self.assertEqual(el.read_exe_gear_rules(EXE),
+                         (el.GEAR_HALF, el.GEAR_FLOOR, el.GEAR_POWER, el.HIGH_GEAR_TORQUE, el.BAND_SCALE,
+                          el.BAND_ADD,
+                          el.HIGH_BAND_ADD))
+
+    def test_low_gears_get_more_torque(self):
+        el = engine_limits
+        self.assertEqual(el.gear_torque(40000, 2.0), 40000)
+        self.assertAlmostEqual(el.gear_torque(40000, 20.0), 40000 / 10 ** 0.5)
+        self.assertEqual(el.gear_torque(40000, 12.0, high=True), 50000)
+        self.assertEqual(el.band_end(20.0), 45.0)
+        self.assertEqual(el.band_end(12.0, high=True), 14.0)
+
+
+class BigTankMassTest(unittest.TestCase):
+    """16.10, in-game test: the Big Fuel Tank A-469 "goes slowly and feels very heavy". The exe
+    adds fuel mass only through a <FuelMass><Body Mass=.../></FuelMass> block of the truck
+    XML (reader 0x1408c93b9, 'fuel mass body', the body mass follows the fill at
+    0x1408caf4f); only cisterns have one. The law: no truck a fuel package ships has a
+    FuelMass block, and apart from FuelCapacity the copy is the stock truck (also checked
+    for every copy by build_workshop.verify_variants), so a bigger tank weighs nothing."""
+
+    @unittest.skipUnless(os.path.isfile(EXE), "game not installed")
+    def test_exe_reads_fuel_mass_only_from_the_block(self):
+        with open(EXE, "rb") as fh:
+            data = fh.read()
+        self.assertIn(b"\0FuelMass\0", data)
+        self.assertIn(b"fuel mass body", data)
+
+    @unittest.skipUnless(HAVE_GAME, "game not installed")
+    def test_big_tank_copies_have_no_fuel_mass_and_stock_mass(self):
+        from common import resolver_with, stock
+        b = built()["infinite_fuel"]
+        r = resolver_with(b.files)
+        seen = 0
+        for path in b.files:
+            if not (path.startswith("classes/trucks/otf_") and path.endswith(".xml")):
+                continue
+            cls = path[len("classes/trucks/"):-4]
+            got = r.resolve("trucks", cls)[0]
+            want = stock().resolve("trucks", cls[4:])[0]
+            self.assertFalse(got.find("FuelMass"), cls)
+            self.assertEqual([x.get("Mass") for x in got.find("PhysicsModel/Body")],
+                             [x.get("Mass") for x in want.find("PhysicsModel/Body")], cls)
+            self.assertEqual([x.get("CenterOfMassOffset") for x in got.find("PhysicsModel/Body")],
+                             [x.get("CenterOfMassOffset") for x in want.find("PhysicsModel/Body")], cls)
+            seen += 1
+        self.assertGreater(seen, 30)

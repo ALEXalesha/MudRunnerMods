@@ -1,6 +1,7 @@
 {
   "id": "infinite_fuel",
   "title": "Big Fuel Tank",
+  "title_ru": "Большой бак",
   "package": "opentrail_fuel",
   "version": "1.1.0",
   "workshop_prefix": "otf",

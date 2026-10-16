@@ -30,9 +30,9 @@ MUTATIONS = [
     ("mods/no_damage/mod.json", '"set": "64000"', '"set": "1000"', "test_mods.py",
      "test_each_mod_alone_patches_every_target"),
     ("mods/infinite_fuel/mod.json", '"scale": 4', '"scale": 0', "test_mods.py", "test_no_zero_divisors"),
-    ("mods/powerful_engines/mod.json", '"scale": 2.5', '"scale": 2.0', "test_mods.py",
+    ("mods/powerful_engines/mod.json", '"scale": 3\n', '"scale": 2.5\n', "test_mods.py",
      "test_each_mod_alone_patches_every_target"),
-    ("tools/build_mods.py", 'if "hyper_power" in names and "powerful_engines" in names:', "if False:",
+    ("tools/build_mods.py", "        clash = conflicts(names)\n", "        clash = []\n",
      "test_mods.py", "test_custom_package_has_exactly_the_chosen_mods"),
     ("mods/awd_difflock/mod.json", '"none": "full",\n        "": "full"', '"none": "full"', "test_mods.py",
      "test_each_mod_alone_patches_every_target"),
@@ -128,6 +128,34 @@ MUTATIONS = [
      "test_limits.py", "test_garage_rules_match_the_exe"),
     ("tools/build_mods.py", "            < engine_limits.GARAGE_START_RADIUS",
      "            < 1000.0", "test_mods.py", "test_plains_lock_is_a_garage_not_a_truck"),
+    # 16.10: power felt only in 5th gear - the gears' speed band (engine_limits.gear_torque/band_end)
+    ("mods/powerful_engines/mod.json", '"path": "TruckData/Motor/Gear",\n      "attr": "AngVel",\n      "scale": 1.5',
+     '"path": "TruckData/Motor/Gear",\n      "attr": "AngVel",\n      "scale": 1.0', "test_mods.py",
+     "test_power_mods_are_felt_in_every_gear"),
+    ("mods/hyper_power/mod.json", '"path": "TruckData/Motor/HighGear",\n      "attr": "AngVel",\n      "scale": 2,',
+     '"path": "TruckData/Motor/HighGear",\n      "attr": "AngVel",\n      "scale": 1,', "test_mods.py",
+     "test_power_mods_are_felt_in_every_gear"),
+    ("tools/engine_limits.py", "GEAR_POWER = 0.5 ", "GEAR_POWER = 0.0 ", "test_limits.py",
+     "test_gear_rules_match_the_exe"),
+    ("tools/engine_limits.py", '("Gear", "AngVel"): (0.1, 32.0),', '("Gear", "AngVel"): (0.1, 64.0),',
+     "test_limits.py", "test_limits_match_the_exe"),
+    # 16.10: your own set (tools/combine.py) - sum of the parts, conflicts are a choice
+    ("tools/build_mods.py", "            if common:\n", "            if False:\n", "test_combine.py",
+     "test_power_mods_conflict_and_nothing_else_does"),
+    ("tools/build_mods.py", '            for x in specs:\n                combo["ops"].extend(x["ops"])',
+     '            for x in specs[:1]:\n                combo["ops"].extend(x["ops"])', "test_combine.py",
+     "test_everything_compatible_in_one_truck"),
+    ("tools/build_mods.py", 'CUSTOM_SUFFIX_RU = "Свой набор"', 'CUSTOM_SUFFIX_RU = "Custom"', "test_combine.py",
+     "test_names_and_package"),
+    ("tools/combine.py", "        names.remove(b if keep == a else a)", "        names.remove(keep)", "test_combine.py",
+     "test_conflict_is_a_choice_not_an_overwrite"),
+    ("tools/install_local.py", "        packages = [custom]\n", "        packages = []\n", "test_install.py",
+     "test_custom_set_alone_and_removable"),
+    # 16.10: the big tank adds no mass (only a FuelMass block does)
+    ("tools/build_workshop.py", "            node.attrs[attr] = value\n        out[(kind, new)]",
+     "            node.attrs[attr] = value\n        if prefix == \"otf\":\n"
+     "            root.find(\"PhysicsModel/Body\")[0].attrs[\"Mass\"] = \"9999\"\n        out[(kind, new)]",
+     "test_limits.py", "test_big_tank_copies_have_no_fuel_mass_and_stock_mass"),
 ]
 
 

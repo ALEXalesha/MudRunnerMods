@@ -1,8 +1,9 @@
 {
   "id": "powerful_engines",
   "title": "Powerful Engines",
+  "title_ru": "Мощный мотор",
   "package": "opentrail_power",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "workshop_prefix": "otp",
   "workshop_suffix": "Powerful",
   "suffix_ru": "Мощный мотор",
@@ -12,13 +13,29 @@
       "only": "drivable",
       "path": "TruckData/Motor",
       "attr": "Torque",
-      "scale": 2.5
+      "scale": 3
+    },
+    {
+      "kind": "trucks",
+      "only": "drivable",
+      "path": "TruckData/Motor/Gear",
+      "attr": "AngVel",
+      "scale": 1.5,
+      "max": 32
+    },
+    {
+      "kind": "trucks",
+      "only": "drivable",
+      "path": "TruckData/Motor/HighGear",
+      "attr": "AngVel",
+      "scale": 1.5,
+      "max": 32
     }
   ],
   "workshop": {
     "short": "POWERFUL\nENGINES",
-    "tag_en": "Engine torque x2.5",
-    "tag_ru": "Крутящий момент x2,5",
+    "tag_en": "Torque x3, every gear x1.5 faster",
+    "tag_ru": "Момент x3, каждая передача x1,5 быстрее",
     "bg": [
       30,
       40,
@@ -30,11 +47,13 @@
       255
     ],
     "en": [
-      "Engine torque of every truck x2.5 (Motor Torque, stock 16,000 to 240,000). Trucks pull much harder in mud and uphill and still drive normally.",
+      "Engine torque of every truck x3 and every forward gear (and the high gear) 1.5 times faster (gear AngVel x1.5, at most 32, the game's limit). The truck pulls harder AND goes faster in every gear, not only in the top one.",
+      "Why the gears too: the game gives a gear no torque above a fixed wheel speed (2 x AngVel + 5 rad/s), however strong the engine. With more torque alone (version 1.0.0, x2.5) light trucks felt the same in gears 1-4 and stronger only in 5th. A faster gear gets a bit less torque in the game's formula (Torque / sqrt(AngVel / 2)), so the torque factor is x3: every gear still has at least x2.4 of its stock torque.",
       "Use either this or Hyper Power, not both."
     ],
     "ru": [
-      "Крутящий момент двигателя каждого грузовика x2,5 (Motor Torque, в игре от 16 000 до 240 000). Грузовики заметно сильнее тянут в грязи и в гору и при этом нормально едут.",
+      "Крутящий момент двигателя каждого грузовика x3, и каждая передача вперёд (и повышенная) в 1,5 раза быстрее (AngVel передачи x1,5, не больше 32 - предел игры). Грузовик сильнее тянет И быстрее едет на каждой передаче, а не только на последней.",
+      "Зачем передачи: игра не даёт передаче момента выше определённой скорости колёс (2 x AngVel + 5 рад/с), каким бы сильным ни был мотор. С одним моментом (версия 1.0.0, x2,5) лёгкие грузовики на 1-4 передачах ехали как обычно, сильнее только на 5-й. Быстрой передаче игра даёт чуть меньше момента (формула Torque / корень(AngVel / 2)), поэтому момент x3: на каждой передаче остаётся не меньше x2,4 от обычного.",
       "Используйте либо этот мод, либо Hyper Power, не оба."
     ]
   },
