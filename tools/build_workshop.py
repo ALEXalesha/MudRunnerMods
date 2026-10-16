@@ -487,7 +487,68 @@ def release_assets(folders, local_dir, out_dir):
                     full = os.path.join(dp, f)
                     z.write(full, os.path.relpath(full, os.path.dirname(base)).replace("\\", "/"))
     assets.append(allzip)
+    assets.append(tools_zip(local_dir, out_dir))
     return assets
+
+
+# The tools for players who do not clone the repository: the two .bat files, the Python
+# modules, the mod definitions and the small packages in build/local, so that
+# install_local.py works right after unpacking. Unlocked Trucks (295 MB) stays a separate
+# file: the README says to put it into build\local. tests/test_release.py runs the unpacked copy.
+TOOLS_ZIP = "OpenTrail_Tools.zip"
+TOOLS_BATS = ["Открыть карты MudRunner.bat", "Собрать свой мод.bat"]
+TOOLS_SKIP = {"mutation_check.py"}                  # developer only: breaks a temporary copy
+KIT_MAX_PACKAGE = 20 * 1024 * 1024
+TOOLS_README = """OpenTrail - утилиты для Spintires: MudRunner / tools
+
+Русский
+Нужен Python 3 с python.org (при установке отметить "Add python.exe to PATH").
+Игра должна стоять в Steam по обычному пути (Program Files (x86)\\Steam\\steamapps\\common\\MudRunner).
+ПЕРЕД ЛЮБОЙ ПРАВКОЙ ИГРУ ПОЛНОСТЬЮ ЗАКРЫТЬ. Утилиты сначала показывают, что изменится,
+пишут только после "да" и всегда делают резервную копию.
+
+1. Поставить моды: в папке build\\local уже лежат пакеты opentrail_*.zip (Unlocked Trucks -
+   скачать opentrail_unlock.zip из выпуска и положить туда же). Открыть командную строку в этой
+   папке и запустить:
+       py tools\\install_local.py            (только показать)
+       py tools\\install_local.py --apply    (записать; копия Config.xml.opentrail-<время>)
+       py tools\\install_local.py --all --apply   (с Hyper Power и Unlocked Trucks)
+   Убрать моды: py tools\\install_local.py --remove --apply
+2. "Собрать свой мод.bat" - несколько модов на одном грузовике ("<грузовик> (Свой набор)").
+   Откат: запустить снова и выбрать 0.
+3. "Открыть карты MudRunner.bat": 1 - открыть карты (профиль), 2 - гаражи, 3 - грузовики
+   на карте (сохранение карты), 4 - откат профиля, 5 - откат сохранения карты.
+   Копия профиля: %APPDATA%\\SpinTires MudRunner\\UserProfile.stu.opentrail-<время>
+   Копии сохранений: %LOCALAPPDATA%\\OpenTrail\\MudRunner saves backup
+   Если Steam Cloud спросит, какую версию оставить - выбрать файлы этого компьютера.
+
+English
+Python 3 from python.org. Close the game before any change. Every tool shows the change
+first, writes only after "да" (yes) and makes a backup.
+1. Mods: the packages are in build\\local (put opentrail_unlock.zip there too if you want it):
+   py tools\\install_local.py --apply    (undo: --remove --apply)
+2. "Собрать свой мод.bat": your own set, several mods on one truck (undo: 0).
+3. "Открыть карты MudRunner.bat": 1 maps (profile), 2 garages, 3 trucks on a map (map save),
+   4 undo profile, 5 undo map save. Backups as listed above.
+"""
+
+
+def tools_zip(local_dir, out_dir):
+    """OpenTrail_Tools.zip: bats, tools/*.py (tracked), mods/, small packages, a note."""
+    import subprocess
+    files = subprocess.run(["git", "-C", ROOT, "ls-files", "-z", "--", "tools", "mods"],
+                           capture_output=True, check=True).stdout.decode("utf-8").split("\0")
+    files = [f for f in files if f and os.path.basename(f) not in TOOLS_SKIP]
+    path = os.path.join(out_dir, TOOLS_ZIP)
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        for rel in TOOLS_BATS + files:
+            z.write(os.path.join(ROOT, rel), rel)       # as stored: the .bat files keep CRLF
+        for f in sorted(os.listdir(local_dir)):
+            full = os.path.join(local_dir, f)
+            if f.startswith("opentrail_") and f.endswith(".zip") and os.path.getsize(full) <= KIT_MAX_PACKAGE:
+                z.write(full, "build/local/" + f)
+        z.writestr("README - ПРОЧТИ.txt", TOOLS_README.replace("\n", "\r\n").encode("utf-8"))
+    return path
 
 
 def main():

@@ -15,11 +15,16 @@
 #   - the Gitea server address  -> gitea.local;
 #   - the full name / surname   -> the nick ALEXalesha (plus git config publish.privateExtra);
 #   - the local projects folder -> C:\Projects;
-#   - Steam user ids from this PC -> 0.
+#   - Steam user ids from this PC -> 0;
+#   - the personal path         -> Users\you (git config publish.privatePath, a folder like
+#                                  C:\<folder>\<name>: any slash, any case, also in commit
+#                                  messages). tests/test_privacy.py keeps personal data
+#                                  out of new commits.
 # None of these strings is written here: the e-mail comes from git config user.email,
 # the address from remote origin, the name from git config publish.privateName and
-# publish.privateExtra (local settings, never in the history), the folder from the
-# location of this repository, the Steam ids from the Steam userdata folder.
+# publish.privateExtra, the path from publish.privatePath (local settings, never in the
+# history), the folder from the location of this repository, the Steam ids from the
+# Steam userdata folder.
 #
 # Do not run it before the mods are tested in game: first the test, then
 # the release (VERSION, CHANGELOG, docs/release-notes/vX.Y.Z.md).
@@ -85,6 +90,37 @@ for pair in "${PAIRS[@]}"; do
 done
 echo "private strings to replace: ${#PAIRS[@]}"
 
+# The personal path (C:\folder\name) becomes an expression that catches any spelling:
+# forward, back and doubled back slashes (JSON, Python strings), any case. The expression
+# and its replacement lie as files in .git: inside the filter-branch string the back
+# slashes would need escaping in three layers.
+PRIVATE_PATH="$(git config --get publish.privatePath || true)"
+if [ -z "$PRIVATE_PATH" ]; then
+  echo "git config publish.privatePath is not set - the personal path cannot be replaced" >&2
+  exit 1
+fi
+IFS='\/' read -r -a PATH_PARTS <<< "${PRIVATE_PATH#?:}"
+PATH_RE=""
+n=0
+for part in "${PATH_PARTS[@]}"; do
+  [ -n "$part" ] || continue
+  case $n in
+    0) PATH_RE="$(esc "$part")" ;;
+    1) PATH_RE="$PATH_RE"'([\\/]+)'"$(esc "$part")" ;;
+    *) PATH_RE="$PATH_RE"'[\\/]+'"$(esc "$part")" ;;
+  esac
+  n=$((n + 1))
+done
+if [ $n -lt 2 ]; then
+  echo "publish.privatePath: at least two folders are needed, like C:\\folder\\name" >&2
+  exit 1
+fi
+GIT_DIR_ABS="$(cd "$(git rev-parse --git-dir)" && pwd)"
+PATH_SED="$GIT_DIR_ABS/publish-path.sed"
+PATH_GREP="$GIT_DIR_ABS/publish-path.grep"
+printf '%s\n' "s#$PATH_RE#Users\\1you#gI" > "$PATH_SED"
+printf '%s\n' "$PATH_RE" > "$PATH_GREP"
+
 git remote get-url github >/dev/null 2>&1 || git remote add github "https://github.com/$REPO.git"
 
 # --- authors ---------------------------------------------------------------------
@@ -94,13 +130,14 @@ FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --env-filter "
   if [ \"\$GIT_COMMITTER_EMAIL\" = '$PRIVATE_EMAIL' ]; then export GIT_COMMITTER_EMAIL='$PUBLIC_EMAIL'; fi
   if [ \"\$GIT_AUTHOR_NAME\" = '$PRIVATE_NAME' ]; then export GIT_AUTHOR_NAME='$PUBLIC_NAME'; fi
   if [ \"\$GIT_COMMITTER_NAME\" = '$PRIVATE_NAME' ]; then export GIT_COMMITTER_NAME='$PUBLIC_NAME'; fi
-" github-main >/dev/null 2>&1
+" --msg-filter "sed -E -f '$PATH_SED'" github-main >/dev/null 2>&1
 git update-ref -d refs/original/refs/heads/github-main 2>/dev/null || true
 
 # --- file contents across the history --------------------------------------------
 # `|| true`: git grep returns 1 when nothing matches, and with pipefail the script
 # would stop here silently.
-DIRTY=$(git grep -I -i -l -F -f "$GREPFILE" $(git rev-list github-main) -- 2>/dev/null \
+DIRTY=$( { git grep -I -i -l -F -f "$GREPFILE" $(git rev-list github-main) -- 2>/dev/null || true
+           git grep -I -i -l -E -f "$PATH_GREP" $(git rev-list github-main) -- 2>/dev/null || true; } \
         | sed 's/^[^:]*://' | sort -u | tr '\n' ' ' || true)
 if [ -n "$DIRTY" ]; then
   echo "private data in files: $DIRTY- rewriting contents"
@@ -108,7 +145,7 @@ if [ -n "$DIRTY" ]; then
     for f in $DIRTY; do
       mode=\$(git ls-tree \$GIT_COMMIT -- \"\$f\" | awk '{print \$1}')
       [ -n \"\$mode\" ] || continue
-      blob=\$(git cat-file blob \$GIT_COMMIT:\"\$f\" | sed -E -f '$SEDFILE' | git hash-object -w --stdin)
+      blob=\$(git cat-file blob \$GIT_COMMIT:\"\$f\" | sed -E -f '$SEDFILE' | sed -E -f '$PATH_SED' | git hash-object -w --stdin)
       git update-index --cacheinfo \$mode,\$blob,\"\$f\"
     done
   " github-main >/dev/null 2>&1
@@ -116,12 +153,22 @@ if [ -n "$DIRTY" ]; then
 fi
 
 # --- verify before pushing (authors, messages, files) -------------------------------
-if git log github-main --format='%ae%n%ce%n%an%n%cn%n%B' | grep -q -i -F -f "$GREPFILE"; then
+# grep without -q: with -q it exits on the first match, git log gets SIGPIPE, and with
+# pipefail the condition turns false - the guard would silently let the match through.
+if git log github-main --format='%ae%n%ce%n%an%n%cn%n%B' | grep -i -F -f "$GREPFILE" >/dev/null; then
   echo "private data left in commit authors or messages - push cancelled" >&2
   exit 1
 fi
 if git grep -I -q -i -F -f "$GREPFILE" $(git rev-list github-main) -- 2>/dev/null; then
   echo "private data left in the files of the published history - push cancelled" >&2
+  exit 1
+fi
+if git grep -I -q -i -E -f "$PATH_GREP" $(git rev-list github-main) -- 2>/dev/null; then
+  echo "the personal path left in the files of the published history - push cancelled" >&2
+  exit 1
+fi
+if git log github-main --format=%B | grep -i -E -f "$PATH_GREP" >/dev/null; then
+  echo "the personal path left in commit messages - push cancelled" >&2
   exit 1
 fi
 
@@ -150,6 +197,7 @@ git for-each-ref --format='%(refname)' refs/github-tags | xargs -r -n1 git updat
 echo "branch github-main: $(git rev-list --count github-main) commits, $(git log -1 --format=%h github-main)"
 if [ "${DRY_RUN:-}" = 1 ]; then
   echo "DRY_RUN=1: checks passed, nothing pushed"
+  [ -z "$MOVES" ] || echo "tags would move:$MOVES"
   exit 0
 fi
 gh auth setup-git

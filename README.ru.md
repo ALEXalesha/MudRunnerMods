@@ -8,6 +8,37 @@ OpenTrail: моды геймплея для Spintires: MudRunner, собранн
 
 Файлов игры в репозитории нет. `tools/build_mods.py` читает XML классов из установленной игры (`Media.zip` и четыре архива DLC), меняет только нужное и пишет по одному пакету-замене на мод. После обновления игры сборку нужно запустить заново.
 
+## Быстрый старт (выпуск 1.0.0)
+
+Скачать файлы из [последнего выпуска](https://github.com/ALEXalesha/MudRunnerMods/releases/latest):
+
+| Файл | Что это |
+|---|---|
+| `OpenTrail_Tools.zip` | Утилиты и восемь модов сразу: «Открыть карты MudRunner.bat», «Собрать свой мод.bat», `tools\install_local.py`, пакеты в `build\local` (всё, кроме Unlocked Trucks) |
+| `opentrail_<имя>.zip` | Те же моды по одному (см. таблицу «Моды» ниже) |
+| `opentrail_unlock.zip` (295 МБ) | Unlocked Trucks - открытые грузовики на картах, отдельно из-за размера |
+| `OpenTrail_Workshop_Folders.zip` | Папки для MudRunner Editor (Мастерская Steam) |
+
+Нужен Python 3 с python.org (при установке отметить «Add python.exe to PATH»). Игра - в Steam по обычному пути.
+
+**Перед любой правкой игру полностью закрыть.** Все утилиты сначала показывают, что изменится, пишут только после «да» и перед записью делают резервную копию.
+
+1. **Поставить моды.** Распаковать `OpenTrail_Tools.zip` в любую папку (если нужен Unlocked Trucks - положить `opentrail_unlock.zip` в `build\local` этой папки). Открыть в ней командную строку (в адресной строке Проводника набрать `cmd`) и запустить:
+   ```
+   py tools\install_local.py                 (только показать, что будет)
+   py tools\install_local.py --apply         (записать)
+   py tools\install_local.py --all --apply   (то же с Hyper Power и Unlocked Trucks)
+   ```
+   Скрипт добавляет строки пакетов в `%APPDATA%\SpinTires MudRunner\Config.xml` над `Media.zip` и кладёт рядом копию `Config.xml.opentrail-<время>`. **Откат:** `py tools\install_local.py --remove --apply` (или вернуть копию Config.xml). Имена zip не менять: игра падает на имени пакета длиннее 16 символов.
+2. **Свой набор** (несколько модов на одном грузовике): «Собрать свой мод.bat», номера модов, «да». Откат - запустить снова и выбрать `0`.
+3. **Открыть карты, гаражи, грузовики:** «Открыть карты MudRunner.bat».
+   - `1` - карты (профиль `%APPDATA%\SpinTires MudRunner\UserProfile.stu`, копия рядом `UserProfile.stu.opentrail-<время>`);
+   - `2` - гаражи, `3` - запертые грузовики на карте (сохранение карты; сначала сыграть на карте и выйти в меню, потом закрыть игру; копии в `%LOCALAPPDATA%\OpenTrail\MudRunner saves backup`);
+   - `4` - откат профиля, `5` - откат сохранения карты.
+   - Если Steam Cloud спросит, какую версию оставить, - выбрать файлы этого компьютера.
+
+Только одиночная игра.
+
 ## Моды
 
 Десять идей, девять модов. Туман войны файлами игры не убрать (см. «Что невозможно»).
@@ -232,7 +263,7 @@ Grippy Wheels, Winch Anchors и `--probe names` уже работали 10.10. �
 3. AWD and Diff Lock
 4. Deep Fording
 5. No Damage
-6. Infinite Fuel
+6. Big Fuel Tank
 7. Grippy Wheels
 8. Winch Anchors
 9. Unlocked Trucks

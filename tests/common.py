@@ -97,6 +97,13 @@ def private_strings():
     parent = os.path.dirname(ROOT)
     for variant in (parent, parent.replace("\\", "/"), parent.replace("\\", "\\\\")):
         out.add(variant.lower().encode())
+    # the personal folder (git config publish.privatePath, like C:\<folder>\<name>) in every
+    # spelling, also without the drive letter: examples must use %USERPROFILE% or neutral paths
+    ppath = git("config", "publish.privatePath")
+    if ppath:
+        bare = ppath.split(":", 1)[-1].strip("\\/")
+        for sep in ("\\", "/", "\\\\"):
+            out.add(bare.replace("\\", "/").replace("/", sep).lower().encode("utf-8"))
     for d in glob.glob(os.path.join(r"C:\Program Files (x86)", "Steam", "user" + "data", "*")):
         out.add(os.path.basename(d).lower().encode())
     return sorted(x for x in out if len(x) >= 4)

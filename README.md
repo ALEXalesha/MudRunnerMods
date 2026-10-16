@@ -8,6 +8,37 @@ OpenTrail: gameplay mods for Spintires: MudRunner, built from the game's own fil
 
 The repository holds no game files. `tools/build_mods.py` reads the class XML from the installed game (`Media.zip` and the four DLC archives), changes only what a mod needs and writes one override package per mod. After a game update, run the build again.
 
+## Quick start (release 1.0.0)
+
+Download from the [latest release](https://github.com/ALEXalesha/MudRunnerMods/releases/latest):
+
+| File | What it is |
+|---|---|
+| `OpenTrail_Tools.zip` | The tools and eight mods at once: "Открыть карты MudRunner.bat" (open maps), "Собрать свой мод.bat" (your own set), `tools\install_local.py`, packages in `build\local` (all but Unlocked Trucks) |
+| `opentrail_<name>.zip` | The same mods one by one (see "The mods" below) |
+| `opentrail_unlock.zip` (295 MB) | Unlocked Trucks, separate because of its size |
+| `OpenTrail_Workshop_Folders.zip` | Folders for the MudRunner Editor (Steam Workshop) |
+
+Needs Python 3 from python.org (tick "Add python.exe to PATH"). The game in Steam at the default path.
+
+**Close the game completely before any change.** Every tool shows the change first, writes only after "да" (yes) and makes a backup before writing.
+
+1. **Install the mods.** Unpack `OpenTrail_Tools.zip` anywhere (for Unlocked Trucks put `opentrail_unlock.zip` into its `build\local`). Open a command prompt there (type `cmd` in the Explorer address bar) and run:
+   ```
+   py tools\install_local.py                 (show what would change)
+   py tools\install_local.py --apply         (write)
+   py tools\install_local.py --all --apply   (also Hyper Power and Unlocked Trucks)
+   ```
+   It adds the package lines to `%APPDATA%\SpinTires MudRunner\Config.xml` above `Media.zip` and keeps a copy `Config.xml.opentrail-<time>`. **Undo:** `py tools\install_local.py --remove --apply` (or put the copy back). Do not rename the zips: the game crashes on a package name longer than 16 characters.
+2. **Your own set** (several mods on one truck): "Собрать свой мод.bat", mod numbers, "да". Undo: start it again and choose `0`.
+3. **Open maps, garages, trucks:** "Открыть карты MudRunner.bat" (Russian prompts).
+   - `1` maps (profile `%APPDATA%\SpinTires MudRunner\UserProfile.stu`, backup `UserProfile.stu.opentrail-<time>` next to it);
+   - `2` garages, `3` locked trucks on a map (the map save: play the map, go to the main menu, close the game first; backups in `%LOCALAPPDATA%\OpenTrail\MudRunner saves backup`);
+   - `4` undo the profile, `5` undo the map save.
+   - If Steam Cloud asks which version to keep, choose the files of this computer.
+
+Single player only.
+
 ## The mods
 
 Ten ideas, nine mods. The fog of war cannot be removed with game files (see "Not possible").
@@ -239,7 +270,7 @@ Top to bottom (`mods/order.json`), the same order as the MediaPath lines:
 3. AWD and Diff Lock
 4. Deep Fording
 5. No Damage
-6. Infinite Fuel
+6. Big Fuel Tank
 7. Grippy Wheels
 8. Winch Anchors
 9. Unlocked Trucks
@@ -260,7 +291,7 @@ MudRunner Workshop items are uploaded with the MudRunner Editor, which renames e
 
 | Workshop item | Adds |
 |---|---|
-| OpenTrail Hyper Power, Powerful Engines, Deep Fording, No Damage, Infinite Fuel | 20 trucks each |
+| OpenTrail Hyper Power, Powerful Engines, Deep Fording, No Damage, Big Fuel Tank | 20 trucks each |
 | OpenTrail AWD and Diff Lock | 5 trucks (the base-game trucks that lack AWD or a diff lock) |
 | OpenTrail Grippy Wheels | 24 wheel types and 20 trucks that use them |
 

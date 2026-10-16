@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.1.0 - 16.10, not released yet (waiting for the in-game test)
+## 1.0.0 - 17.10.2026, first release
+
+Checked in game by the tester on 16.10 (8th test): "everything works" - maps (tool item 1), trucks on the map (3), garages (2), Powerful Engines and Hyper Power, "Собрать свой мод.bat". The first public release holds everything below; nothing was published before. Inside the packages Hyper Power, Powerful Engines and Big Fuel Tank carry mod version 1.1.0 (changed after the 7th test), the others 1.0.0.
+
+Release files: the nine `opentrail_*.zip` packages, `OpenTrail_Tools.zip` (both .bat tools, `tools/*.py`, `mods/`, the eight small packages in `build/local` so `install_local.py` works right after unpacking; `tests/test_release.py` runs the unpacked copy: the tools start with `python -I`, `install_local.py` edits a copy of a Config.xml with the bundled packages, no personal data; 3 mutations caught) and `OpenTrail_Workshop_Folders.zip`. README: quick start with install, undo and the backups of every tool.
+
+### After the 7th in-game test (11-16.10)
 
 After the 7th in-game test (11-16.10):
 - **Powerful Engines 1.1.0 and Hyper Power 1.1.0: felt in every gear.** "Only 5th gear gives more" had a cause in the exe's gearbox (0x140922270): a gear gets `Torque / sqrt(max(AngVel/2, 1))` (high gear `Torque x 1.25`) times a wheel-speed curve that reaches zero at `2 x AngVel + 5` rad/s (high gear `AngVel + 2`), so more torque alone cannot move a gear past its speed band. Now Powerful Engines is `Torque` x3 and forward/high gear `AngVel` x1.5, Hyper Power `Torque` x10 (cap 1,000,000) and `AngVel` x2; `AngVel` is capped at the exe's 32 (new rows in `engine_limits.LIMITS`, read from the exe). Law `test_power_mods_are_felt_in_every_gear` (per truck and gear, with the exe's formula: torque at least x2.4 / x2.9, band x1.5 / x2, reverse stock) and `GearRulesTest` (the formula's constants read from the exe).
@@ -12,9 +18,9 @@ After the 7th in-game test (11-16.10):
 - **Unlocked Trucks "the truck on the map stays locked": cause found (16.10 evening).** The locked trucks a new game shows on the map ("Drive closer to the truck to unlock it") are not in any level file. The tester's own save from the test (`level_volcano.sts`, written 01:02:59 while the mod was installed) has 3 open garage trucks and 4 locked ones (D-535, K-700, C-255, B-131) that the Volcano level file does not contain at all; they stand on the level's type-6 locators. The exe's new game picks 4 of those spots at random and spawns a random truck from a table in its code at each (0x1406e38d0), placed by the exe and never unlocked; they open only within 12 m. `engine_limits.RANDOM_TRUCK_*` + `read_exe_random_trucks`, law `RandomTruckCauseTest` (rules read from the exe, no level record near any spot on the 10 maps that have spots, the mod's description says what it does not do). The mod is unchanged (its package is byte for byte the same); its description now names the maps it does open (Flood, River, Valley, Ridge, Old-timers) and points to the tool for the rest.
 - **Open trucks and garages in a map save: `Открыть карты MudRunner.bat`, items 2, 3 and 5 (new, item 1 and 4 unchanged).** `tools/save_sts.py` locates in `UserSaves/<map>.sts` (version 0x133efb9, from the exe's STS loader 0x14072c1a0) every truck header with its `isUnlocked` byte (the loader unlocks a truck when it is not 0, 0x14072cf85) and the garage list `{position, garage points}` (found by the level file's garage positions). Item 3 sets `isUnlocked = 1`, item 2 gives garages the 4 points they need, item 5 restores the save. Game must be closed, dry run first, writes after "да" only, backup in `%LOCALAPPDATA%\OpenTrail\MudRunner saves backup`, the written file is read back and only the planned bytes may differ. Laws in `tests/test_saves.py` (synthetic saves and, with `MUDRUNNER_SAVES_COPY`, copies of real saves: all 15 of the tester's saves parse with the exact truck count); 9 mutations (69).
 
-## 1.0.0 - not released yet (waiting for the in-game test)
+### Tests 1-6 (03-11.10)
 
-First version, built from the files of MudRunner 0.6.8 with all four DLC.
+First build, built from the files of MudRunner 0.6.8 with all four DLC.
 
 Mods (public names "OpenTrail ..."):
 - **Hyper Power**: Motor Torque x10, capped at 1,000,000, on 36 trucks. Replaces Powerful Engines.
