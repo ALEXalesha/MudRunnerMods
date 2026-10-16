@@ -104,6 +104,14 @@ Without questions: `tools\combine.py --mods infinite_fuel,powerful_engines,no_da
 
 Laws (`tests/test_combine.py`): the copy is the sum of the parts (every value a chosen mod changes holds exactly what that mod gives alone, the rest is stock); mods that change the same value are never silently stacked: Powerful Engines and Hyper Power both set the torque and the gear speeds, so the script asks which one to keep, and with `--mods` it stops and names both (`build_mods.conflicts`). No other mods overlap. Install your own set alone: `install_local.py --custom --apply` installs only it.
 
+## Open maps: profile edit (16.10)
+
+Double click **`Открыть карты MudRunner.bat`** (game closed). Item `1` lists the maps short of points and asks yes/no; only then `%APPDATA%\SpinTires MudRunner\UserProfile.stu` is changed, a backup `UserProfile.stu.opentrail-<time>` is made next to it. Item `4` restores the newest backup. CLI: `tools/unlock_profile.py --maps [--write]`, `--restore --write`.
+
+From the exe: a map's lock is a number in the code (`level_coast` 1, `level_river` 2, `level_hill` 2, `level_flood` 3, `level_dlc3_02` 1, others 0, `engine_limits.read_exe_map_requirements`), compared with `profile.numLogPoints`; a map with `status.nMinCompleteBalance` != 0 is open anyway. The tool raises `numLogPoints` to 3 (never lowers it); every other byte stays. The whole file format is parsed to the last byte (`tools/profile_stu.py`, from the STU loader 0x1407e3a00); no checksum, no encryption. Laws in `tests/test_profile.py` (temp copies only), 6 mutations.
+
+Garages and trucks (items 2 and 3) are not done: a garage lock is garage points in the map save (`UserSaves/*.sts`); the profile's `status.unlockedTrucks` is a list of 12-byte truck positions (3 floats) per save. Neither is understood well enough to edit.
+
 ## Install (local packages)
 
 The game reads extra files through `<MediaPath>` lines in its Config.xml. The first copy of a file wins, so the packages go above `Media.zip`.

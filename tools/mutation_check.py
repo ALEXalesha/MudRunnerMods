@@ -156,6 +156,20 @@ MUTATIONS = [
      "            node.attrs[attr] = value\n        if prefix == \"otf\":\n"
      "            root.find(\"PhysicsModel/Body\")[0].attrs[\"Mass\"] = \"9999\"\n        out[(kind, new)]",
      "test_limits.py", "test_big_tank_copies_have_no_fuel_mass_and_stock_mass"),
+    # 16.10: profile unlock tool (UserProfile.stu)
+    ("tools/profile_stu.py", "    out[\"numLogPoints_at\"] = r.p\n", "    out[\"numLogPoints_at\"] = r.p + 1\n",
+     "test_profile.py", "test_edit_law_synthetic"),
+    ("tools/profile_stu.py", "            m[\"isAllGaragesUnlocked\"] = r.u8(\"isAllGaragesUnlocked\")\n", "",
+     "test_profile.py", "test_synthetic_profile_parses_to_the_end"),
+    ("tools/unlock_profile.py", "    bk = make_backup(profile)\n    write_atomic(profile, new)",
+     "    bk = profile\n    write_atomic(profile, new)", "test_profile.py",
+     "test_write_makes_backup_and_restore_brings_it_back"),
+    ("tools/unlock_profile.py", "    if not ask_yes(\"Записать изменения в профиль?\", assume_yes):",
+     "    if False:", "test_profile.py", "test_no_without_confirmation"),
+    ("tools/unlock_profile.py", "    if install_local.game_running():", "    if False:", "test_profile.py",
+     "test_refuses_while_game_runs"),
+    ("tools/engine_limits.py", "\"level_flood\": 3,", "\"level_flood\": 2,", "test_profile.py",
+     "test_table_matches_the_exe"),
 ]
 
 

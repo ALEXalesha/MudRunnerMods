@@ -350,3 +350,47 @@ def read_exe_garage_rules(exe_path):
     if radius is None:
         return None
     return need, radius
+
+
+# --------------------------------------------------------------------------- map locks
+
+# Map locks (found 16.10, MudRunner.exe): 0x14076fdf0 fills a map's lock info from a table in
+# the CODE - `lea rdx, "level_x"; call strcmp; jne next; mov dword [rdi], index;
+# mov dword [rdi+0xc], need` (no `mov [rdi+0xc], imm` = need 0, the shared tail writes ebx=0).
+# The lock (0x14009b139, 0x14076d42e): need > profile.numLogPoints and the map's
+# status.nMinCompleteBalance == 0. profile.numLogPoints is read only by the STU loader
+# (0x1407e3efa) - so it is the profile field the unlock tool sets.
+MAP_LOG_POINTS = {"level_plains": 0, "level_volcano": 0, "level_coast": 1, "level_river": 2,
+                  "level_hill": 2, "level_flood": 3, "level_valley": 0, "level_ridge": 0,
+                  "level_dlc3_01": 0, "level_dlc3_02": 1, "level_dlc4_01": 0}
+
+
+def read_exe_map_requirements(exe_path):
+    """{level name: log points it needs} read from MudRunner.exe, or None."""
+    pe = _Pe(exe_path)
+    anchor = None
+    # the string may be the tail of a longer one (pooled), so resolve every candidate lea
+    for m in re.finditer(rb"\x48\x8d\x15.{4}.{0,40}?\xc7\x47\x0c\x01\x00\x00\x00", pe.code, re.S):
+        i = m.start()
+        o = pe.off(pe.tva + i + 7 + struct.unpack_from("<i", pe.code, i + 3)[0])
+        if o is not None and pe.d[o:o + 12] == b"level_coast\0":
+            anchor = i
+    if anchor is None:
+        return None
+    leas = []
+    for m in re.finditer(rb"\x48\x8d\x15", pe.code[anchor - 0x80:anchor + 0x180]):
+        i = anchor - 0x80 + m.start()
+        va = pe.tva + i + 7 + struct.unpack_from("<i", pe.code, i + 3)[0]
+        o = pe.off(va)
+        if o is None:
+            continue
+        name = pe.d[o:o + 40].split(b"\0")[0]
+        if name.startswith(b"level_"):
+            leas.append((i, name.decode("ascii")))
+    out = {}
+    for k, (i, name) in enumerate(leas):
+        end = leas[k + 1][0] if k + 1 < len(leas) else i + 0x40
+        block = pe.code[i:end]
+        j = block.find(b"\xc7\x47\x0c")
+        out[name] = struct.unpack_from("<I", block, j + 3)[0] if j >= 0 else 0
+    return out or None
