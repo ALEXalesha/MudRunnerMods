@@ -2,6 +2,9 @@
 
 OpenTrail: gameplay mods for Spintires: MudRunner, built from the game's own files, plus the tools that build and check them.
 
+[![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-D97757?logo=claude&logoColor=white)](https://claude.com/claude-code)
+Code, tests and docs are written by Claude (Anthropic) in Claude Code. Ideas, testing and decisions - Alexey.
+
 > Not affiliated with or endorsed by Saber Interactive or Focus Entertainment. "Spintires: MudRunner" is their trademark. The mods are fan-made and for single player.
 
 [Русская версия](README.ru.md)

@@ -2,6 +2,9 @@
 
 OpenTrail: моды геймплея для Spintires: MudRunner, собранные из файлов самой игры, и инструменты, которые их собирают и проверяют.
 
+[![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-D97757?logo=claude&logoColor=white)](https://claude.com/claude-code)
+Код, тесты и документация этого проекта написаны Claude (Anthropic) в Claude Code. Идеи, проверка и решения - Алексей.
+
 > Не связано с Saber Interactive и Focus Entertainment и не одобрено ими. «Spintires: MudRunner» - их товарный знак. Моды любительские, для одиночной игры.
 
 [English version](README.md)
