@@ -64,6 +64,23 @@ def source(kind, name):
     return fs().source(mrxml.KIND_DIRS[kind] + name + ".xml")
 
 
+PUBLIC_HOSTS = {"github.com"}
+# The first name is public by design: the README authorship line ("... decisions - Alexey")
+# stands in every repository since 17.10. The rest of publish.privateName stays private.
+PUBLIC_WORDS = {"alexey"}
+
+
+def private_host(url):
+    """The host of a git remote if it is private (the home Gitea), else None.
+
+    On GitHub Actions origin is github.com: flagging it made every README link
+    a "private string" (CI red since 17.10)."""
+    m = re.match(r"^[a-z]+://(?:[^@/]+@)?([^/:]+)", url or "")
+    if not m or m.group(1).lower() in PUBLIC_HOSTS:
+        return None
+    return m.group(1).lower().encode()
+
+
 def private_strings():
     """Personal strings that must never reach a public file.
 
@@ -89,11 +106,11 @@ def private_strings():
         out.add(email.lower().encode())
     for word in (git("config", "publish.privateName") + " " +
                  git("config", "publish.privateExtra").replace("|", " ")).split():
-        if len(word) >= 4:
+        if len(word) >= 4 and word.lower() not in PUBLIC_WORDS:
             out.add(word.lower().encode("utf-8"))
-    m = re.match(r"^[a-z]+://([^/:]+)", git("remote", "get-url", "origin"))
-    if m:
-        out.add(m.group(1).lower().encode())
+    host = private_host(git("remote", "get-url", "origin"))
+    if host:
+        out.add(host)
     parent = os.path.dirname(ROOT)
     for variant in (parent, parent.replace("\\", "/"), parent.replace("\\", "\\\\")):
         out.add(variant.lower().encode())

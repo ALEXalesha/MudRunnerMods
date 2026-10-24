@@ -27,6 +27,19 @@ class PrivacyTest(unittest.TestCase):
         # without the git config the check would pass trivially
         self.assertTrue(any(b"@" in s for s in FORBIDDEN) or os.environ.get("CI"), FORBIDDEN)
 
+    def test_public_remote_host_is_not_private(self):
+        # law: GitHub (CI checkout) is public, any other remote host is private
+        for url in ("https://github.com/ALEXalesha/MudRunnerMods", "https://x-access-token:t@github.com/a/b.git",
+                    "https://GitHub.com/a/b"):
+            self.assertIsNone(common.private_host(url), url)
+        for host in ("192.168.7.9", "gitea.home.lan", "10.0.0.5"):
+            self.assertEqual(common.private_host("http://%s:3000/u/r.git" % host), host.encode(), host)
+        self.assertIsNone(common.private_host(""))
+
+    def test_authorship_first_name_is_public(self):
+        # the README authorship line names Alexey; the check must not turn it red
+        self.assertNotIn(b"alexey", FORBIDDEN)
+
     def test_repository_files(self):
         n = 0
         for rel in tracked_files():
