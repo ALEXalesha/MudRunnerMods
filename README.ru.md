@@ -1,3 +1,5 @@
+<div align="center">
+
 # MudRunnerMods
 
 OpenTrail: моды геймплея для Spintires: MudRunner, собранные из файлов самой игры, и инструменты, которые их собирают и проверяют.
@@ -5,6 +7,8 @@ OpenTrail: моды геймплея для Spintires: MudRunner, собранн
 [![Status](https://img.shields.io/badge/status-stable-brightgreen)](#) [![Release](https://img.shields.io/github/v/release/ALEXalesha/MudRunnerMods)](https://github.com/ALEXalesha/MudRunnerMods/releases/latest) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![MudRunner](https://img.shields.io/badge/MudRunner-mods-1B2838?logo=steam&logoColor=white)](https://store.steampowered.com/app/675010/) [![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)](https://www.python.org/) [![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-D97757?logo=claude&logoColor=white)](https://claude.com/claude-code)
 
 Код, тесты и документация этого проекта написаны Claude (Anthropic) в Claude Code. Идеи, проверка и решения - Алексей.
+
+</div>
 
 > Не связано с Saber Interactive и Focus Entertainment и не одобрено ими. «Spintires: MudRunner» - их товарный знак. Моды любительские, для одиночной игры.
 
